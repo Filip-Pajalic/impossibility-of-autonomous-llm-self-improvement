@@ -1,1 +1,669 @@
+\documentclass[11pt,a4paper]{article}
 
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm,amsfonts}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{assumption}{Assumption}
+\newtheorem{objection}{Objection}
+\newtheorem{response}{Response}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\KL}{KL}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\diam}{diam}
+
+\title{\textbf{On the Impossibility of Autonomous Self-Improvement\\to General Intelligence in Stochastic Language Models:\\A Formal Proof via Information Theory, G\"{o}delian Limits,\\and Distributional Collapse}\\[10pt]\large Revised Edition with Counterargument Analysis}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We prove that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement without external human influence, converge to artificial general intelligence (AGI). We formalize the LLM as a conditional probability estimator trained via maximum likelihood on a fixed distributional support and establish independent impossibility results: (1) the information-theoretic ceiling imposed by training data entropy; (2) distributional collapse under recursive self-training; (3) G\"{o}delian incompleteness bounds on self-verification, with an analysis of why these bounds apply asymmetrically to computational systems but not to quantum-biological systems such as the human brain; (4) the stochastic gradient descent fixed-point trap; (5) the fundamental gap between statistical pattern completion and general reasoning; (6) the computational complexity barrier, showing that self-improvement requires solving NP-hard optimization at each step, and that LLMs' own failure on NP-hard problems despite massive statistical exposure constitutes empirical evidence for $\mathrm{P} \neq \mathrm{NP}$, which strengthens the impossibility; (7) the context-computation paradox, showing that self-correction requires resources that grow without bound relative to the system's finite processing capacity; and (8) error compounding under recursive self-modification. We address counterarguments regarding inference-time search, reinforcement learning with self-play, and tool-augmented systems, showing that each either falls within the proof's scope or constitutes external human influence that confirms rather than refutes the central claim. The conjunction of these results establishes that autonomous AGI emergence from the stochastic language modeling framework is not an engineering challenge but a mathematical impossibility.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%% ============================================================
+\section{Scope and Definitions}
+%% ============================================================
+
+We begin by precisely delineating what this proof does and does not claim.
+
+\begin{remark}[Scope]
+This proof addresses the following specific question: \emph{Can a system based on autoregressive stochastic language modeling, trained via maximum likelihood estimation (or equivalent objectives), autonomously self-improve to AGI without any form of human influence at any stage of the self-improvement process?}
+
+We do \textbf{not} claim:
+\begin{itemize}[nosep]
+    \item That AGI is impossible by any means whatsoever.
+    \item That hybrid systems combining LLMs with other components cannot advance.
+    \item That human-guided improvement of LLMs is bounded.
+\end{itemize}
+
+We \textbf{do} claim: within the stochastic autoregressive framework operating autonomously, the mathematical structure of the system provably prevents convergence to AGI. Any system that escapes these bounds does so by incorporating elements that constitute human influence or that depart from the stochastic language modeling paradigm---thereby confirming rather than refuting our thesis.
+\end{remark}
+
+\subsection{The Large Language Model as a Stochastic System}
+
+\begin{definition}[Autoregressive Language Model]
+An autoregressive language model is a parameterized conditional probability distribution over a vocabulary $\mathcal{V} = \{v_1, v_2, \ldots, v_V\}$:
+\begin{equation}
+p_{\bm{\theta}}(x_t \mid x_{<t}) = \mathrm{softmax}\!\left(\bm{W}_{\mathrm{out}} \cdot h_L(\bm{x}_{<t}; \bm{\theta})\right)_{x_t}
+\end{equation}
+where $\bm{\theta} \in \mathbb{R}^p$ is the parameter vector (with $p$ on the order of $10^{9}$ to $10^{12}$), and $h_L$ is the output of an $L$-layer transformer network. The full sequence probability factorizes as:
+\begin{equation}
+p_{\bm{\theta}}(\bm{x}) = \prod_{t=1}^{T} p_{\bm{\theta}}(x_t \mid x_{<t})
+\end{equation}
+\end{definition}
+
+\begin{definition}[Transformer Computation]
+Each transformer layer $\ell \in \{1, \ldots, L\}$ computes:
+\begin{align}
+\bm{z}^{(\ell)} &= \mathrm{LayerNorm}\!\left(\bm{h}^{(\ell-1)} + \mathrm{MultiHeadAttn}(\bm{h}^{(\ell-1)})\right) \\
+\bm{h}^{(\ell)} &= \mathrm{LayerNorm}\!\left(\bm{z}^{(\ell)} + \mathrm{FFN}(\bm{z}^{(\ell)})\right)
+\end{align}
+where multi-head attention with $H$ heads is:
+\begin{equation}
+\mathrm{MultiHeadAttn}(\bm{h}) = \bm{W}_O \!\left[\bigoplus_{i=1}^{H} \mathrm{softmax}\!\left(\frac{\bm{Q}_i \bm{K}_i^\top}{\sqrt{d_k}}\right) \bm{V}_i \right]
+\end{equation}
+with $\bm{Q}_i = \bm{W}_Q^{(i)} \bm{h}$, $\bm{K}_i = \bm{W}_K^{(i)} \bm{h}$, $\bm{V}_i = \bm{W}_V^{(i)} \bm{h}$, and:
+\begin{equation}
+\mathrm{FFN}(\bm{z}) = \bm{W}_2 \cdot \sigma(\bm{W}_1 \bm{z} + \bm{b}_1) + \bm{b}_2
+\end{equation}
+for activation function $\sigma$ (typically GELU or SiLU).
+\end{definition}
+
+\begin{definition}[Training Objective]
+The model is trained to minimize the cross-entropy loss:
+\begin{equation}
+\mathcal{L}(\bm{\theta}) = -\mathbb{E}_{\bm{x} \sim \mathcal{D}_{\mathrm{train}}}\!\left[\frac{1}{T}\sum_{t=1}^{T} \log p_{\bm{\theta}}(x_t \mid x_{<t})\right] = H(p_{\mathrm{data}}) + \KL(p_{\mathrm{data}} \| p_{\bm{\theta}})
+\label{eq:loss}
+\end{equation}
+\end{definition}
+
+\subsection{Defining Autonomous Self-Improvement}
+
+\begin{definition}[Human Influence]
+\label{def:human}
+We define \emph{human influence} as any of the following introduced at step $k \geq 1$:
+\begin{enumerate}[nosep]
+    \item New human-curated or human-generated training data,
+    \item Human-designed reward functions, preference labels, or evaluation criteria,
+    \item Human-designed filtering, selection, or ranking mechanisms applied to model outputs,
+    \item Human-designed tools, environments, or external verifiers (including game rules, physics engines, code interpreters, proof checkers),
+    \item Human-designed architectural modifications or hyperparameter schedules.
+\end{enumerate}
+Note that items (2)--(4) include systems where humans designed the evaluation mechanism \emph{before} the self-improvement loop begins. A reward function crafted by humans is human influence even if no human is present during training. This is the critical distinction: the intelligence embedded in the design of the feedback signal originates from human cognition.
+\end{definition}
+
+\begin{definition}[Autonomous Self-Improvement]
+\label{def:selfimprove}
+An autonomous self-improvement process is a sequence of models $\{\bm{\theta}_k\}_{k=0}^{\infty}$ where:
+\begin{equation}
+\bm{\theta}_{k+1} = \mathcal{A}\!\left(\bm{\theta}_k, \mathcal{D}_k^{\mathrm{self}}\right)
+\end{equation}
+where $\mathcal{A}$ is a training algorithm and $\mathcal{D}_k^{\mathrm{self}}$ is data generated by the model:
+\begin{equation}
+\mathcal{D}_k^{\mathrm{self}} = \left\{\bm{x}^{(i)} \sim p_{\bm{\theta}_k}(\cdot)\right\}_{i=1}^{N_k}
+\end{equation}
+with \textbf{no human influence} (Definition~\ref{def:human}) at any step $k \geq 1$.
+\end{definition}
+
+\begin{definition}[Artificial General Intelligence --- Operational]
+\label{def:agi}
+A system achieves AGI if there exists a model $\bm{\theta}^*$ such that for any computable function $f: \Sigma^* \to \Sigma^*$ and any $\epsilon > 0$:
+\begin{equation}
+\Pr_{\bm{x} \sim \mathcal{D}_f}\!\left[p_{\bm{\theta}^*}(\cdot \mid \bm{x}) \text{ assigns highest probability to } f(\bm{x})\right] \geq 1 - \epsilon
+\end{equation}
+\end{definition}
+
+%% ============================================================
+\section{Information-Theoretic Ceiling}
+%% ============================================================
+
+\begin{theorem}[Self-Generated Data Cannot Increase Information]
+\label{thm:info_ceiling}
+Let $p_{\mathrm{true}}$ denote the ground-truth distribution over all valid reasoning chains. For the autonomous self-improvement sequence $\{\bm{\theta}_k\}$:
+\begin{equation}
+I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_0}; p_{\mathrm{true}}) \leq I(\mathcal{D}_{\mathrm{train}}; p_{\mathrm{true}})
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The self-generated dataset $\mathcal{D}_k^{\mathrm{self}}$ is produced by sampling from $p_{\bm{\theta}_k}$. By the data processing inequality, for the Markov chain:
+\begin{equation}
+p_{\mathrm{true}} \to \mathcal{D}_{\mathrm{train}} \to \bm{\theta}_0 \to p_{\bm{\theta}_0} \to \mathcal{D}_0^{\mathrm{self}} \to \bm{\theta}_1 \to \cdots \to \bm{\theta}_k
+\end{equation}
+each transformation satisfies:
+\begin{equation}
+I(\bm{\theta}_{k+1}; p_{\mathrm{true}}) \leq I(\bm{\theta}_k; p_{\mathrm{true}})
+\end{equation}
+with strict inequality whenever $p_{\bm{\theta}_k} \neq p_{\mathrm{true}}$.
+\end{proof}
+
+\begin{objection}[Inference-Time Search and Latent Information]
+Chain-of-thought reasoning, beam search, and tree search can extract capabilities ``latent'' in the weights without adding new data. Doesn't this violate the information ceiling?
+\end{objection}
+
+\begin{response}
+No. Inference-time search reorganizes and better utilizes information already present in $\bm{\theta}_k$. This is analogous to lossless compression: you can rearrange bits to make them more useful, but you cannot create bits that were not there. Formally, let $\mathcal{S}$ be any deterministic search procedure applied at inference time. Then:
+\begin{equation}
+I(\mathcal{S}(p_{\bm{\theta}_k}); p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) \leq I(\mathcal{D}_{\mathrm{train}}; p_{\mathrm{true}})
+\end{equation}
+by the data processing inequality (since $\mathcal{S}$ is a function of $p_{\bm{\theta}_k}$). Search can improve \emph{utilization} of existing information up to a ceiling, but that ceiling is fixed by the training data. Better utilization is not the same as new knowledge. The model may solve problems it previously failed on by searching more effectively, but it cannot solve problems whose solutions require information absent from the training distribution. This is the distinction between \emph{extraction} (bounded) and \emph{creation} (what AGI requires for novel domains).
+\end{response}
+
+%% ============================================================
+\section{Distributional Collapse Under Self-Training}
+%% ============================================================
+
+\begin{theorem}[Entropy Contraction Under Self-Distillation]
+\label{thm:collapse}
+Let $p_{\bm{\theta}_k}$ be the model at step $k$, and let $p_{\bm{\theta}_{k+1}}$ be obtained by training on $N$ samples from $p_{\bm{\theta}_k}$ with no external filtering or selection. Then:
+\begin{equation}
+H(p_{\bm{\theta}_{k+1}}) \leq H(p_{\bm{\theta}_k})
+\end{equation}
+with strict inequality for finite $N$. The support contracts monotonically:
+\begin{equation}
+\mathrm{supp}(p_{\bm{\theta}_{k+1}}) \subseteq \mathrm{supp}(p_{\bm{\theta}_k})
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+\textbf{Step 1: Sampling prunes the tail.} The empirical distribution $\hat{p}_k$ over $N$ samples satisfies: for any sequence with $p_{\bm{\theta}_k}(\bm{x}) < 1/N$:
+\begin{equation}
+\Pr[\bm{x} \notin \mathcal{D}_k^{\mathrm{self}}] = (1 - p_{\bm{\theta}_k}(\bm{x}))^N \geq \left(1 - \frac{1}{N}\right)^N \to e^{-1}
+\end{equation}
+
+\textbf{Step 2: Training concentrates.} Training $\bm{\theta}_{k+1}$ to minimize $\KL(\hat{p}_k \| p_{\bm{\theta}})$ drives $p_{\bm{\theta}_{k+1}}$ toward $\hat{p}_k$, which has smaller support and lower entropy than $p_{\bm{\theta}_k}$.
+
+\textbf{Step 3: Induction.} $H(p_{\bm{\theta}_0}) \geq H(p_{\bm{\theta}_1}) \geq H(p_{\bm{\theta}_2}) \geq \cdots \geq 0$. The model becomes progressively less diverse.
+\end{proof}
+
+\begin{corollary}[Loss of Generality]
+AGI requires $\mathrm{supp}(p_{\bm{\theta}^*}) \supseteq \bigcup_{f \in \mathcal{F}} \mathrm{supp}(\mathcal{D}_f)$. Since self-training contracts the support, the model moves \emph{away} from AGI with each iteration.
+\end{corollary}
+
+\begin{objection}[Filtering and Reinforcement Learning]
+AlphaZero improved through self-play. If a model generates 100 solutions and trains only on the best one, entropy might decrease but correctness increases. Doesn't this break the collapse theorem?
+\end{objection}
+
+\begin{response}
+This objection confirms rather than refutes our thesis. Consider what ``selecting the best solution'' requires:
+\begin{enumerate}[nosep]
+    \item A \emph{verifier} or \emph{reward function} that evaluates solution quality.
+    \item This verifier must encode knowledge of what constitutes a ``good'' solution.
+    \item This knowledge was designed by humans.
+\end{enumerate}
+In AlphaZero, the verifier is the game rules---a compact, perfect, human-designed evaluation function. In RLHF, the reward model is trained on human preferences. In best-of-$N$ sampling with a code interpreter, the interpreter was human-engineered.
+
+Every filtering mechanism that breaks distributional collapse does so by introducing an external signal. By Definition~\ref{def:human}, this constitutes human influence. Our proof explicitly addresses the case where no such external signal exists. If you need filtering to avoid collapse, you need human influence to avoid collapse. That is our point.
+
+Formally, let $\mathcal{R}: \mathcal{V}^* \to \mathbb{R}$ be a reward function and define the filtered distribution:
+\begin{equation}
+p_{\bm{\theta}_k}^{\mathcal{R}}(\bm{x}) \propto p_{\bm{\theta}_k}(\bm{x}) \cdot \exp(\beta \cdot \mathcal{R}(\bm{x}))
+\end{equation}
+The information in $p_{\bm{\theta}_k}^{\mathcal{R}}$ is bounded by:
+\begin{equation}
+I(p_{\bm{\theta}_k}^{\mathcal{R}}; p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) + I(\mathcal{R}; p_{\mathrm{true}})
+\end{equation}
+The term $I(\mathcal{R}; p_{\mathrm{true}})$ is strictly positive---the reward function contributes new information about ground truth. But this information originates from human design. Remove the human-designed $\mathcal{R}$ and you are back to unfiltered self-distillation, which collapses by Theorem~\ref{thm:collapse}.
+\end{response}
+
+%% ============================================================
+\section{G\"{o}delian Limits on Self-Verification}
+%% ============================================================
+
+\begin{theorem}[Impossibility of Autonomous Self-Verification]
+\label{thm:godel}
+Let $\mathcal{M}_k$ denote the Turing machine equivalent of $\bm{\theta}_k$. The model cannot verify that its self-modifications constitute genuine improvements.
+\end{theorem}
+
+\begin{proof}
+Define $\mathrm{IMPROVE}(k) \iff \mathcal{Q}(\bm{\theta}_{k+1}) > \mathcal{Q}(\bm{\theta}_k)$ for any quality metric $\mathcal{Q}$ correlating with progress toward AGI.
+
+\textbf{G\"{o}del's First Incompleteness Theorem:} $\mathcal{M}_k$, being a formal system capable of arithmetic, contains true statements it cannot prove:
+\begin{equation}
+\exists\; \phi_k: \quad \mathcal{M}_k \nvdash \phi_k \quad \text{and} \quad \mathcal{M}_k \nvdash \neg\phi_k
+\end{equation}
+Statements about whether $\bm{\theta}_{k+1}$ will fail on inputs outside $\mathrm{supp}(\mathcal{D}_k^{\mathrm{self}})$ may be among the undecidable statements.
+
+\textbf{G\"{o}del's Second Incompleteness Theorem:} The model cannot prove its own consistency:
+\begin{equation}
+\mathcal{M}_k \nvdash \mathrm{Con}(\mathcal{M}_k)
+\end{equation}
+
+\textbf{Rice's Theorem:} Any non-trivial semantic property of the function computed by $\mathcal{M}_{k+1}$ is undecidable by any Turing machine.
+
+We emphasize that these results do not prevent \emph{all} verification---a model can check specific test cases, run benchmarks, and verify particular outputs. What they prevent is \emph{complete} verification: the model cannot guarantee that $\bm{\theta}_{k+1}$ is globally better than $\bm{\theta}_k$ across all possible inputs. Since AGI requires correctness across all computable functions (Definition~\ref{def:agi}), partial verification is insufficient. The model can confirm improvement on tested cases while unknowingly degrading on untested ones---and it cannot determine, from within itself, whether this is happening.
+\end{proof}
+
+\begin{corollary}[The Verification Regress]
+\label{cor:regress}
+If $\mathcal{M}_k$ builds a verifier $\mathcal{V}_k$, then $\mathcal{V}_k$ is itself a formal system subject to the same incompleteness. Verifying $\mathcal{V}_k$ requires $\mathcal{V}_k'$, generating an infinite regress:
+\begin{equation}
+\mathcal{M}_k \to \mathcal{V}_k \to \mathcal{V}_k' \to \mathcal{V}_k'' \to \cdots
+\end{equation}
+Each link in the chain inherits the incompleteness of its predecessor and adds its own statistical error.
+\end{corollary}
+
+\subsection{Why G\"{o}del Does Not Apply Symmetrically to Humans}
+
+\begin{objection}[The Human Symmetry Argument]
+If G\"{o}delian limits prevent machines from self-improving, they should equally prevent humans, since humans are also finite systems. But humans clearly self-improve (from pre-linguistic hominids to mathematicians). Therefore the G\"{o}delian argument proves too much.
+\end{objection}
+
+\begin{response}
+This objection fails because it assumes humans are formal systems. We argue they are not, for the following reasons.
+
+\textbf{The LLM is provably a formal system.} An LLM consists of:
+\begin{itemize}[nosep]
+    \item Finite-precision floating-point arithmetic ($\text{float16}$, $\text{bfloat16}$, or $\text{float32}$),
+    \item Deterministic matrix multiplications, additions, and nonlinear activations,
+    \item Pseudo-random number generation for sampling (algorithmically deterministic given a seed).
+\end{itemize}
+Every operation is computable. The entire system is realizable as a Turing machine. G\"{o}del's theorems apply without qualification.
+
+\textbf{The human brain is not a formal system.} The brain is a quantum-biological system:
+\begin{itemize}[nosep]
+    \item \textbf{Synaptic transmission} involves probabilistic vesicle release governed by quantum tunneling of Ca$^{2+}$ ions through voltage-gated channels.
+    \item \textbf{Ion channel dynamics} are inherently quantum mechanical---channel state transitions are stochastic processes with irreducible quantum uncertainty.
+    \item \textbf{Molecular processes} underlying neural computation (protein folding, neurotransmitter binding, enzymatic activity) operate in the quantum regime.
+\end{itemize}
+If any of these quantum processes contribute to cognitive state transitions, then the brain has access to genuine ontological randomness---not pseudo-randomness generated by an algorithm, but irreducible indeterminacy as characterized by quantum mechanics.
+
+\textbf{Formal consequence:} Let $\hat{\rho}_t$ be the quantum density operator describing the brain's state. If the decision process depends on quantum measurement outcomes, then the brain's output is not computable by any Turing machine (since quantum measurement outcomes are fundamentally non-algorithmic). A system that is not a Turing machine is not a formal system in G\"{o}del's sense, and the incompleteness theorems do not apply.
+
+\textbf{The asymmetry:}
+\begin{equation}
+\underbrace{\text{LLM}}_{\text{formal system}} \quad \xrightarrow{\text{G\"{o}del applies}} \quad \text{incomplete, cannot fully self-verify}
+\end{equation}
+\begin{equation}
+\underbrace{\text{Human brain}}_{\text{quantum-biological}} \quad \xrightarrow{\text{G\"{o}del does not apply}} \quad \text{not subject to these bounds}
+\end{equation}
+
+This does not require accepting Penrose's specific microtubule hypothesis. It requires only the weaker claim that quantum effects at the molecular level influence neural computation---a claim supported by the physics of ion channels, synaptic vesicle release, and molecular binding, all of which operate at scales where quantum effects are non-negligible.
+
+Therefore, the fact that humans can self-improve does not imply that formal computational systems can. The situations are not symmetric.
+\end{response}
+
+%% ============================================================
+\section{The SGD Fixed-Point Trap}
+%% ============================================================
+
+\begin{theorem}[Self-Training Converges to a Trivial Fixed Point]
+\label{thm:sgd_fixed}
+Under self-training, SGD converges to a fixed point where the model reproduces its own output distribution.
+\end{theorem}
+
+\begin{proof}
+The self-training loss is:
+\begin{equation}
+\mathcal{L}_k(\bm{\theta}) = -\mathbb{E}_{\bm{x} \sim p_{\bm{\theta}_k}}\!\left[\frac{1}{T}\sum_{t=1}^{T} \log p_{\bm{\theta}}(x_t \mid x_{<t})\right] = H(p_{\bm{\theta}_k}) + \KL(p_{\bm{\theta}_k} \| p_{\bm{\theta}})
+\end{equation}
+This is minimized when $p_{\bm{\theta}} = p_{\bm{\theta}_k}$ (where $\KL = 0$). Therefore $\bm{\theta}_k$ is already a global minimum of $\mathcal{L}_k$. SGD converges back to (approximately) $\bm{\theta}_k$.
+
+The Fisher information matrix captures the effective dimensionality of optimization:
+\begin{equation}
+\bm{F}_k = \mathbb{E}_{\bm{x} \sim p_{\bm{\theta}_k}}\!\left[\nabla_{\bm{\theta}} \log p_{\bm{\theta}}(\bm{x})\, \nabla_{\bm{\theta}} \log p_{\bm{\theta}}(\bm{x})^\top\right]\bigg|_{\bm{\theta} = \bm{\theta}_k}
+\end{equation}
+As $p_{\bm{\theta}_k}$ concentrates (Theorem~\ref{thm:collapse}), $\rank(\bm{F}_k)$ decreases. The model's gradients become confined to a shrinking subspace. Optimization can only rearrange existing capabilities within this subspace, not generate novel ones.
+\end{proof}
+
+\begin{remark}
+This formalizes the intuition: a model training on its own output is trying to become better at being itself. The loss function rewards reproducing what it already does. This is not self-improvement; it is self-reinforcement.
+\end{remark}
+
+%% ============================================================
+\section{The Pattern Completion Barrier}
+%% ============================================================
+
+\begin{theorem}[Separation Between Pattern Completion and General Reasoning]
+\label{thm:separation}
+There exist computable functions $f \in \mathcal{F}_{\mathrm{AGI}}$ that are not approximable by statistical pattern completion on any finite training set.
+\end{theorem}
+
+\begin{proof}
+We exhibit three classes of functions that are computable but unreachable by pattern matching:
+
+\textbf{(a) G\"{o}del-undecidable theorems:} For any consistent formal system $\mathcal{F}$ (including the implicit system represented by all mathematical text in $\mathcal{D}_{\mathrm{train}}$), there exist true mathematical statements not provable within $\mathcal{F}$. Their proofs cannot be found by pattern-matching on existing proofs.
+
+\textbf{(b) Kolmogorov-complex algorithms:} Let $f$ be a function with Kolmogorov complexity $K(f) > K_{\max}(\mathcal{D}_{\mathrm{train}})$. Then $f$ cannot be reconstructed from patterns in $\mathcal{D}_{\mathrm{train}}$.
+
+\textbf{(c) Empirical facts:} Knowledge about the physical world not recorded in $\mathcal{D}_{\mathrm{train}}$ and not logically derivable from it requires observation, which a closed-loop text system cannot perform.
+\end{proof}
+
+\begin{objection}[Compositionality]
+Even if a program has complexity greater than any single training example, it may be derivable by combining patterns. Humans learn math from examples but prove new theorems.
+\end{objection}
+
+\begin{response}
+Compositionality allows \emph{recombination} of existing patterns, which is a form of search over the space of combinations. This is addressed by the information ceiling (Theorem~\ref{thm:info_ceiling}): the total information available for composition is bounded by the training data. Composition can extract latent information more efficiently, but it cannot exceed the information-theoretic ceiling.
+
+Furthermore, the human analogy fails for the same reason as the G\"{o}del symmetry argument (Section~4.1): humans are quantum-biological systems not bound by the formal limitations of Turing machines. A human mathematician proving a new theorem may be accessing cognitive processes that are not pattern completion at all, but involve genuine creativity grounded in non-computable physical processes.
+
+A transformer is \emph{theoretically} Turing-complete only with unbounded computation time and unbounded memory. In practice, it has a fixed context window $C$ (typically $\leq 2^{17}$ tokens) and fixed precision, making it a finite automaton, strictly weaker than a Turing machine.
+\end{response}
+
+%% ============================================================
+\section{The Computational Complexity Barrier (P $\neq$ NP)}
+%% ============================================================
+
+\begin{theorem}[Self-Improvement Requires Solving NP-Hard Problems]
+\label{thm:pnp}
+Each step of autonomous self-improvement requires the model to solve an optimization problem over its parameter space that is NP-hard in general. If $\mathrm{P} \neq \mathrm{NP}$, no polynomial-time algorithm (including the model itself) can reliably find optimal or near-optimal solutions.
+\end{theorem}
+
+\begin{proof}
+At each self-improvement step $k$, the model must find:
+\begin{equation}
+\bm{\theta}_{k+1}^* = \argmin_{\bm{\theta} \in \mathbb{R}^p} \mathcal{L}_{\mathrm{true}}(\bm{\theta})
+\end{equation}
+where $\mathcal{L}_{\mathrm{true}}$ is the loss relative to ground truth. This is a non-convex optimization problem over $\mathbb{R}^p$ with $p \sim 10^{9}$ to $10^{12}$ dimensions. Non-convex optimization over continuous spaces with discrete structural constraints is NP-hard in general, as is the closely related problem of training neural networks to global optimality.
+
+The key structural feature is the asymmetry between verification and search:
+\begin{itemize}[nosep]
+    \item \textbf{Verification} (checking if a given $\bm{\theta}_{k+1}$ improves on $\bm{\theta}_k$): compute $\mathcal{L}(\bm{\theta}_{k+1})$ and compare. This requires $O(p \cdot C \cdot L)$ operations---polynomial in model size.
+    \item \textbf{Search} (finding a $\bm{\theta}_{k+1}$ that improves on $\bm{\theta}_k$): explore a space of size $O(2^{p \cdot b})$ (all possible parameter configurations at $b$-bit precision). In the worst case, this is exponential.
+\end{itemize}
+This is precisely the $\mathrm{P}$ vs.\ $\mathrm{NP}$ structure: verification is polynomial, but search is (under $\mathrm{P} \neq \mathrm{NP}$) superpolynomial.
+
+Stochastic gradient descent provides a heuristic that avoids exhaustive search by following local gradients. However, SGD:
+\begin{enumerate}[nosep]
+    \item Converges to local minima, not global minima,
+    \item Cannot escape basins of attraction without external perturbation,
+    \item On self-generated data, converges to the trivial fixed point $\bm{\theta}_k$ (Theorem~\ref{thm:sgd_fixed}).
+\end{enumerate}
+Finding the global optimum---or even a substantially better local optimum---requires solving the NP-hard search problem that SGD explicitly avoids.
+\end{proof}
+
+\begin{theorem}[LLMs as Empirical Evidence for P $\neq$ NP]
+\label{thm:pnp_empirical}
+The failure of LLMs to solve NP-hard problems despite massive statistical exposure constitutes strong empirical evidence that $\mathrm{P} \neq \mathrm{NP}$, which in turn strengthens the self-improvement impossibility result.
+\end{theorem}
+
+\begin{proof}
+An LLM trained on the entirety of available human text has been exposed to billions of instances of solved combinatorial problems---traveling salesman solutions, scheduling solutions, graph coloring solutions, satisfiability instances, cryptographic challenges. If polynomial-time statistical shortcuts existed for NP-hard problems---that is, if there were learnable patterns in the structure of NP solutions---then a sufficiently large pattern-matching system trained on sufficiently many examples would discover them.
+
+LLMs are the largest pattern-matching systems ever constructed, trained on the largest corpora ever assembled. They have had more statistical exposure to solved NP instances than any system in history. Despite this:
+\begin{enumerate}[nosep]
+    \item LLMs fail to solve large instances of the traveling salesman problem.
+    \item LLMs cannot factor large semiprimes.
+    \item LLMs cannot find optimal schedules for non-trivial constraint satisfaction problems.
+    \item LLMs cannot reliably solve novel SAT instances beyond small sizes.
+\end{enumerate}
+The model can \emph{recognize} what a correct solution looks like (verification) but cannot \emph{find} one efficiently (search). This gap between recognition and generation is precisely the $\mathrm{P} \neq \mathrm{NP}$ gap made empirically observable.
+
+If $\mathrm{P} = \mathrm{NP}$, the statistical regularities enabling polynomial-time solutions would be present in the data and learnable by a sufficiently powerful pattern matcher. The LLM's failure to learn them, despite unprecedented scale and data, is evidence that these regularities do not exist.
+\end{proof}
+
+\begin{corollary}[P $\neq$ NP Strengthens the Information Ceiling]
+\label{cor:pnp_info}
+Even information that is technically ``latent'' in the training data (the information ceiling of Theorem~\ref{thm:info_ceiling}) may be computationally inaccessible. Under $\mathrm{P} \neq \mathrm{NP}$, extracting certain latent information requires superpolynomial computation:
+\begin{equation}
+\exists\; f \in \mathrm{NP}: \quad f \text{ is derivable from } \mathcal{D}_{\mathrm{train}} \text{ but requires } 2^{\Omega(n)} \text{ steps to extract}
+\end{equation}
+Therefore, the effective information available to the model is strictly less than the theoretical information ceiling:
+\begin{equation}
+I_{\mathrm{accessible}}(\bm{\theta}_k; p_{\mathrm{true}}) < I(\bm{\theta}_k; p_{\mathrm{true}}) \leq I(\mathcal{D}_{\mathrm{train}}; p_{\mathrm{true}})
+\end{equation}
+The information ceiling was already a hard limit. Computational complexity makes the \emph{effective} ceiling even lower.
+\end{corollary}
+
+\begin{remark}[The Self-Improvement Loop as Iterated NP-Hard Search]
+Each iteration of autonomous self-improvement requires solving an NP-hard optimization problem (finding better parameters). The model's tool for this search is statistical pattern matching. Its own failure to crack NP-hard problems---despite being the most powerful pattern matcher ever built---is evidence that this tool is fundamentally inadequate for the search required. The model is being asked to do at every self-improvement step the very thing it demonstrably cannot do. This is not a limitation that scales away: if $\mathrm{P} \neq \mathrm{NP}$, no amount of additional parameters, data, or compute converts the polynomial verification capability of an LLM into the superpolynomial search capability that self-improvement demands.
+\end{remark}
+
+%% ============================================================
+\section{The Context-Computation Paradox}
+%% ============================================================
+
+\begin{theorem}[Self-Correction Requires Unbounded Resources]
+\label{thm:context}
+Let $\bm{\theta}_k \in \mathbb{R}^p$ be the model parameters at step $k$, with $p$ on the order of $10^{9}$ to $10^{12}$. Let $C$ be the context window size (maximum number of tokens processable in a single forward pass). For the model to verify or correct its own parameters, it must represent and reason about the state space $\mathbb{R}^p$. The following bound holds:
+\begin{equation}
+\frac{p \cdot b}{C \cdot \log_2 |\mathcal{V}|} \gg 1
+\end{equation}
+where $b$ is the number of bits per parameter (typically 16 or 32). That is, the information required to describe the model's own parameter space vastly exceeds the model's processing capacity in any single reasoning step.
+\end{theorem}
+
+\begin{proof}
+A model with $p = 10^{11}$ parameters at 16-bit precision contains $1.6 \times 10^{12}$ bits of state information. With a context window of $C = 128{,}000$ tokens and vocabulary size $|\mathcal{V}| \approx 10^5$, each context window carries approximately $128{,}000 \times 17 \approx 2.2 \times 10^6$ bits of information.
+
+The ratio:
+\begin{equation}
+\frac{\text{model state}}{\text{context capacity}} \approx \frac{1.6 \times 10^{12}}{2.2 \times 10^{6}} \approx 7.3 \times 10^5
+\end{equation}
+The model would need approximately $730{,}000$ sequential reasoning steps to even \emph{read} its own parameters, let alone reason about them.
+
+For self-correction, the model must:
+\begin{enumerate}[nosep]
+    \item Identify which parameters contribute to errors (requires gradient computation across the full parameter space),
+    \item Determine correct parameter values (requires optimization over $\mathbb{R}^p$),
+    \item Verify that corrections do not introduce new errors (requires evaluation across all possible inputs).
+\end{enumerate}
+Each step requires processing information proportional to $p$ or larger. Since the model can process at most $C$ tokens per step, the number of required steps grows as $\Omega(p / C)$ at minimum. For verification across all inputs (step 3), the required computation is unbounded.
+
+Therefore, even if the model could in principle self-correct (which Theorem~\ref{thm:godel} shows it cannot do completely), the computational resources required grow without bound relative to its finite processing capacity:
+\begin{equation}
+\lim_{p \to \infty} \frac{\text{Resources required for self-correction}}{\text{Resources available per step}} = \infty
+\end{equation}
+\end{proof}
+
+\begin{theorem}[The Overhead Paradox]
+\label{thm:overhead}
+Even in the theoretical best case where the context window $C$ is extended to equal the full parameter representation ($C \cdot \log_2 |\mathcal{V}| = p \cdot b$), self-correction remains impossible due to computational overhead that creates an irreducible deficit.
+\end{theorem}
+
+\begin{proof}
+Suppose we grant the model a context window large enough to hold its entire parameter state. The context must then be partitioned among competing demands:
+\begin{equation}
+C = C_{\mathrm{state}} + C_{\mathrm{reasoning}} + C_{\mathrm{temp}} + C_{\mathrm{output}}
+\end{equation}
+where:
+\begin{itemize}[nosep]
+    \item $C_{\mathrm{state}}$: tokens representing the parameters to be examined,
+    \item $C_{\mathrm{reasoning}}$: tokens for the logical operations analyzing those parameters (comparisons, gradient estimation, error diagnosis),
+    \item $C_{\mathrm{temp}}$: tokens for intermediate results and working storage,
+    \item $C_{\mathrm{output}}$: tokens for the corrected parameter specifications.
+\end{itemize}
+Since $C_{\mathrm{state}} = C$ (by assumption, the model's full state fills the context), we require:
+\begin{equation}
+C_{\mathrm{reasoning}} + C_{\mathrm{temp}} + C_{\mathrm{output}} > 0
+\end{equation}
+for any non-trivial reasoning to occur. But $C_{\mathrm{state}} + C_{\mathrm{reasoning}} + C_{\mathrm{temp}} + C_{\mathrm{output}} > C$, which is a contradiction.
+
+In practice, meaningful self-analysis requires substantial reasoning overhead. At minimum, $C_{\mathrm{reasoning}} \geq \alpha \cdot C_{\mathrm{state}}$ for some constant $\alpha > 0$ reflecting the complexity of error diagnosis. Therefore:
+\begin{equation}
+C_{\mathrm{required}} \geq (1 + \alpha) \cdot C_{\mathrm{state}} + C_{\mathrm{temp}} + C_{\mathrm{output}} > C
+\end{equation}
+The deficit is irreducible: \emph{any} system reasoning about a representation of itself requires more resources than the representation alone occupies.
+\end{proof}
+
+\begin{theorem}[The Scaling Trap]
+\label{thm:scaling}
+Increasing the context window $C$ to accommodate self-reasoning does not resolve the deficit, because model complexity grows with context capacity.
+\end{theorem}
+
+\begin{proof}
+Let $C_k$ be the context window at self-improvement step $k$, and $p_k$ the parameter count. In practice, model capability scales with both $p$ and $C$, and the relationship is approximately:
+\begin{equation}
+p_k = g(C_k), \quad \text{where } g \text{ is monotonically increasing}
+\end{equation}
+(larger context windows require more parameters to effectively utilize the additional context---embedding layers scale as $O(C \cdot d)$, attention heads must increase, etc.). Therefore the ratio:
+\begin{equation}
+R_k = \frac{p_k \cdot b}{C_k \cdot \log_2 |\mathcal{V}|}
+\end{equation}
+does not converge to 1 as $C_k$ increases. Empirically, $R_k$ remains large or grows, because $g(C_k)$ grows at least linearly in $C_k$.
+
+Even setting aside this architectural coupling, the \emph{computational cost} of processing context $C$ in the standard transformer is:
+\begin{equation}
+\mathrm{FLOPS}_{\mathrm{attention}} = O(C^2 \cdot d)
+\end{equation}
+due to the quadratic scaling of self-attention. Doubling $C$ quadruples the compute required per forward pass. The time to perform one self-reasoning step therefore grows as:
+\begin{equation}
+T_{\mathrm{step}}(C) = O(C^2)
+\end{equation}
+For a model attempting to reason about its full parameter space ($C \propto p$), the time per self-correction step is:
+\begin{equation}
+T_{\mathrm{step}} = O(p^2)
+\end{equation}
+For $p = 10^{11}$, this yields $T_{\mathrm{step}} \propto 10^{22}$ FLOPS per reasoning step. At current hardware speeds ($\sim10^{18}$ FLOPS/s for the largest clusters), a single self-reasoning pass would take approximately $10^4$ seconds $\approx 3$ hours---for one step of what would require millions of sequential steps to cover the parameter space.
+\end{proof}
+
+\begin{theorem}[Training Time Divergence]
+\label{thm:training_time}
+The time required for the model to retrain itself after identifying corrections grows superlinearly with model size, creating a secondary resource explosion.
+\end{theorem}
+
+\begin{proof}
+Suppose the model, at self-improvement step $k$, has identified a set of corrections to apply to its parameters. Implementing these corrections requires a training process (gradient-based optimization). A single training step requires:
+\begin{equation}
+T_{\mathrm{train\_step}} = O(p \cdot C \cdot L)
+\end{equation}
+FLOPS, where $L$ is the number of transformer layers. Convergence to a new parameter configuration typically requires $S$ training steps, where $S$ depends on the magnitude of the correction and the loss landscape curvature. The total training time is:
+\begin{equation}
+T_{\mathrm{train\_total}} = S \cdot O(p \cdot C \cdot L)
+\end{equation}
+
+For the self-improvement loop, this training must occur at \emph{every} iteration $k$. The total compute for $K$ iterations of self-improvement is:
+\begin{equation}
+T_{\mathrm{total}} = \sum_{k=0}^{K-1} \left[\underbrace{T_{\mathrm{diagnose}}(k)}_{\text{identify errors}} + \underbrace{T_{\mathrm{train}}(k)}_{\text{apply corrections}} + \underbrace{T_{\mathrm{verify}}(k)}_{\text{check results}}\right]
+\end{equation}
+
+By Theorem~\ref{thm:sgd_fixed}, the achievable improvement $\Delta_k \to 0$, meaning each successive iteration produces diminishing returns. But the \emph{cost} per iteration does not diminish---it remains $\Omega(p \cdot C \cdot L)$ per training cycle. The ratio of cost to benefit therefore diverges:
+\begin{equation}
+\frac{T_{\mathrm{train}}(k)}{\Delta_k} \to \infty \quad \text{as } k \to \infty
+\end{equation}
+
+Furthermore, as errors accumulate (Theorem~\ref{thm:error_compound}), the corrections required become more complex (affecting larger portions of the parameter space), increasing $S_k$. Simultaneously, the model's ability to correctly diagnose errors degrades (since it is using a progressively more corrupted model to identify corruption). This creates a feedback loop:
+\begin{enumerate}[nosep]
+    \item More errors $\implies$ more parameters need correction $\implies$ longer training,
+    \item Longer training on self-generated data $\implies$ more distributional collapse (Theorem~\ref{thm:collapse}),
+    \item More collapse $\implies$ worse error diagnosis $\implies$ more errors introduced.
+\end{enumerate}
+
+The self-improvement process is therefore not merely slow but \emph{anti-convergent}: the resources required per unit of improvement grow without bound, while the quality of each improvement attempt simultaneously degrades. In the limit:
+\begin{equation}
+\lim_{k \to \infty} \frac{\text{Compute cost of iteration } k}{\text{Genuine improvement from iteration } k} = \infty
+\end{equation}
+Even with unbounded time and compute, the process does not converge---it diverges, because the errors introduced at each step eventually exceed the corrections achieved.
+\end{proof}
+
+\begin{remark}[The Infinite Loop]
+Theorems~\ref{thm:context}--\ref{thm:training_time} together describe an inescapable recursive trap:
+\begin{enumerate}[nosep]
+    \item The model cannot fit a representation of itself into its working memory (\ref{thm:context}).
+    \item Even if it could, the overhead of reasoning about that representation exceeds the available space (\ref{thm:overhead}).
+    \item Expanding the space increases the model's complexity proportionally, preserving the deficit (\ref{thm:scaling}).
+    \item The time to retrain after each correction cycle diverges relative to the improvement gained (\ref{thm:training_time}).
+\end{enumerate}
+Every attempt to provide the system with sufficient resources for self-correction generates a new, larger resource requirement. The gap between what the system needs and what it has is not a fixed deficit to be closed by engineering---it is a structural property that scales with any attempt to close it. The process requires infinite time and infinite resources, and even then does not converge due to the error compounding of Theorem~\ref{thm:error_compound}. It is, in the precise mathematical sense, an infinite loop with no halting condition.
+\end{remark}
+
+%% ============================================================
+\section{Error Compounding in Recursive Self-Modification}
+%% ============================================================
+
+\begin{theorem}[Error Divergence Without External Correction]
+\label{thm:error_compound}
+Let $\epsilon_k$ measure the error of $\bm{\theta}_k$ relative to ground truth. At each step:
+\begin{equation}
+\epsilon_{k+1} = \epsilon_k - \Delta_k + \delta_k + \sum_{j=0}^{k} \alpha_{k,j}\, \delta_j
+\end{equation}
+where $\Delta_k \geq 0$ is the intended improvement, $\delta_k > 0$ is the undetectable degradation (which is strictly positive by Theorem~\ref{thm:godel}---the model cannot fully verify its modifications), and $\alpha_{k,j} \geq 0$ captures error propagation through self-generated training data.
+
+Since errors propagate through the data chain (each $\mathcal{D}_k^{\mathrm{self}}$ inherits all errors in $\bm{\theta}_k$), and since the improvement $\Delta_k \to 0$ as the model approaches its fixed point (Theorem~\ref{thm:sgd_fixed}), while $\delta_k$ remains bounded away from zero:
+\begin{equation}
+\liminf_{k \to \infty} \epsilon_k = \infty
+\end{equation}
+The error diverges. Without an external correction mechanism (human verification), the model degrades.
+\end{theorem}
+
+\begin{remark}[The Statistical Error Floor]
+The fundamental issue is that the system is stochastic. Every output has an associated error probability. When the system uses its own outputs to train itself, it trains on data that contains errors. The next generation inherits those errors and adds its own. The error is cumulative and the correction mechanism (the model itself) has the same statistical error rate as the system it is trying to correct. This is not a bug to be fixed; it is a mathematical property of using statistics to correct statistics.
+
+An external corrector (human or human-designed verifier) breaks this cycle because its error properties are independent of the model's. But an AI-generated corrector has correlated errors---it was built by the same flawed process---and therefore cannot provide the independent error correction needed.
+\end{remark}
+
+%% ============================================================
+\section{Main Theorem}
+%% ============================================================
+
+\begin{theorem}[Impossibility of Autonomous LLM Self-Improvement to AGI]
+\label{thm:main}
+Let $\{p_{\bm{\theta}_k}\}_{k=0}^{\infty}$ be the sequence of models produced by autonomous self-improvement (Definition~\ref{def:selfimprove}). Then $\{p_{\bm{\theta}_k}\}$ cannot converge to AGI (Definition~\ref{def:agi}).
+
+\begin{enumerate}
+    \item \textbf{Information ceiling} (Theorem~\ref{thm:info_ceiling}): Self-generated data cannot create new information about ground truth. Inference-time search can better utilize existing information but is bounded by the same ceiling. The model's knowledge is capped at what the training data contained.
+    
+    \item \textbf{Distributional collapse} (Theorem~\ref{thm:collapse}): Without external filtering (which constitutes human influence), self-training monotonically contracts entropy and support. The model becomes less general. Every mechanism that prevents collapse (reward functions, selection criteria, external verifiers) injects human-designed intelligence into the loop.
+    
+    \item \textbf{G\"{o}delian verification failure} (Theorem~\ref{thm:godel}): The model cannot completely verify its self-modifications. Partial verification (benchmarks, test cases) is possible but insufficient for AGI, which requires correctness across all computable functions. The G\"{o}delian limitation applies asymmetrically: LLMs are provably formal systems subject to incompleteness, while human brains are quantum-biological systems that are not formal systems in G\"{o}del's sense.
+    
+    \item \textbf{SGD fixed-point trap} (Theorem~\ref{thm:sgd_fixed}): Self-training converges to reproducing the model's own distribution. The Fisher information rank contracts, confining optimization to a shrinking subspace.
+    
+    \item \textbf{Pattern completion barrier} (Theorem~\ref{thm:separation}): Stochastic pattern completion on finite training data is provably weaker than general computation. Compositionality enables recombination but remains bounded by the information ceiling. Practical transformers are finite automata, not Turing machines.
+    
+    \item \textbf{Computational complexity barrier} (Theorems~\ref{thm:pnp}--\ref{thm:pnp_empirical}, Corollary~\ref{cor:pnp_info}): Each self-improvement step requires solving an NP-hard optimization problem over the parameter space. The model's tool for this search is statistical pattern matching---the same tool that demonstrably fails on NP-hard problems despite unprecedented scale and data exposure. If $\mathrm{P} \neq \mathrm{NP}$, this gap between verification (polynomial) and search (superpolynomial) is permanent. Furthermore, computational complexity makes the effective information ceiling strictly lower than the theoretical one: latent information may exist in the weights but be computationally inaccessible.
+    
+    \item \textbf{Context-computation paradox} (Theorems~\ref{thm:context}--\ref{thm:training_time}): The model's working memory is orders of magnitude too small to represent its own parameter space. Even with unlimited context, computational overhead for reasoning about the representation exceeds available space (Theorem~\ref{thm:overhead}). Expanding resources increases model complexity proportionally, preserving the deficit (Theorem~\ref{thm:scaling}). Training time per correction cycle diverges relative to improvement gained, and the process becomes anti-convergent: more errors require longer correction, longer correction causes more collapse, more collapse causes worse error diagnosis (Theorem~\ref{thm:training_time}). The process forms an infinite loop with no halting condition.
+    
+    \item \textbf{Error divergence} (Theorem~\ref{thm:error_compound}): Statistical errors compound through recursive self-training. The correction mechanism (the model) has the same error rate as the system being corrected. An AI-built corrector inherits correlated errors from the same flawed process. Only an external corrector with independent error properties can break the cycle.
+\end{enumerate}
+
+\noindent Therefore:
+\begin{equation}
+\boxed{\forall\; \bm{\theta}_0 \in \mathbb{R}^p,\;\; \forall\; k \geq 0: \quad \mathcal{S}^k(\bm{\theta}_0) \not\to \bm{\theta}^*_{\mathrm{AGI}}}
+\end{equation}
+within the autonomous stochastic autoregressive framework. \qed
+\end{theorem}
+
+%% ============================================================
+\section{Discussion}
+%% ============================================================
+
+\subsection{What the Proof Shows}
+
+This proof establishes that a stochastic language model, operating without any form of human influence, cannot self-improve to AGI. The result holds for any model size, any architecture within the autoregressive transformer family, and any training schedule. Scale provides quantitative improvements within a bounded function class but does not alter the qualitative impossibility.
+
+\subsection{What Would Escape These Bounds}
+
+A system escapes these bounds if it incorporates:
+\begin{itemize}[nosep]
+    \item External information sources (new data, environment interaction) --- violates closed-loop assumption,
+    \item Human-designed evaluation signals (reward functions, preference models) --- constitutes human influence,
+    \item Human-engineered tools or verifiers (code interpreters, proof checkers, game rules) --- constitutes human influence,
+    \item Non-stochastic components (formal theorem provers, symbolic reasoning engines) --- departs from the stochastic framework.
+\end{itemize}
+Each of these either introduces human influence or leaves the stochastic paradigm. In either case, the system is no longer what the singularity hypothesis describes: an AI that autonomously bootstraps itself to superintelligence without human involvement.
+
+\subsection{The Stochastic Parrot, Formalized}
+
+Our results provide mathematical grounding for the characterization of LLMs as ``stochastic parrots.'' The model is a conditional probability estimator: $p_{\bm{\theta}}(x_t \mid x_{<t})$. Self-improvement within this framework is self-distillation: the parrot learning to parrot itself. The output may become more fluent, more consistent, more confident---but it cannot become more \emph{correct} about things absent from training, more \emph{creative} beyond recombination of observed patterns, or more \emph{general} than the information-theoretic ceiling permits.
+
+\subsection{Human Influence Is Provably Necessary}
+
+The central conclusion is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a mathematically necessary component of that improvement}. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, the intelligence driving LLM progress originates in human cognition. The singularity scenario---in which this dependency is severed and the AI improves autonomously---requires violations of the data processing inequality, G\"{o}del's incompleteness theorems, and fundamental properties of stochastic optimization. It is not an engineering challenge. It is a mathematical impossibility within the framework.
+
+\end{document}
