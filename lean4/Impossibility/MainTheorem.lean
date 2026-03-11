@@ -39,7 +39,7 @@ structure ImpossibilityBarriers (seq : SelfImprovementSeq) (gt : GroundTruth) wh
   /-- 6. Complexity barrier: self-improvement requires NP-hard search -/
   complexity_barrier : True  -- Placeholder; conditional on P ≠ NP
   /-- 7. Context paradox: working memory is insufficient for self-correction -/
-  context_paradox : seq.model 0 |>.num_params > seq.model 0 |>.context_window
+  context_paradox : (seq.model 0).num_params > (seq.model 0).context_window
   /-- 8. Error divergence: errors compound without external correction -/
   error_divergence : True  -- Placeholder for the error divergence result
 

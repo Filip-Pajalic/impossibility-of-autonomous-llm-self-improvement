@@ -141,8 +141,8 @@ theorem nontrivial_quality_exists :
       (∃ f, Nat.Partrec f ∧ f ∈ Quality) ∧
       (∃ g, Nat.Partrec g ∧ g ∉ Quality) := by
   refine ⟨{f | (f 0).Dom}, ?_, ?_⟩
-  · exact ⟨↑Nat.succ, succ_partrec, Part.some_dom _⟩
-  · exact ⟨fun _ => Part.none, none_partrec, Part.not_none_dom⟩
+  · exact ⟨↑Nat.succ, succ_partrec, Part.some_dom 1⟩
+  · exact ⟨fun _ => Part.none, none_partrec, @Part.not_none_dom ℕ⟩
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Part III: The Halting Problem — Even Basic Properties Are Undecidable
@@ -173,7 +173,7 @@ theorem halting_undecidable (n : ℕ) :
 
     **Status: PROVEN** (re-export of Mathlib's theorem). -/
 theorem halting_re (n : ℕ) :
-    REPred (fun (c : Code) => (Code.eval c n).Dom) :=
+    RePred (fun (c : Code) => (Code.eval c n).Dom) :=
   ComputablePred.halting_problem_re n
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -268,7 +268,7 @@ axiom godel_second_incompleteness :
 axiom llm_to_code : LLModel → Code
 
 /-- The function computed by the LLM. -/
-def llm_function (m : LLModel) : ℕ →. ℕ := Code.eval (llm_to_code m)
+noncomputable def llm_function (m : LLModel) : ℕ →. ℕ := Code.eval (llm_to_code m)
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Part VI: Main Theorem — Verification Failure
@@ -364,11 +364,10 @@ theorem verification_regress
     (h_nontrivial : (∃ f, Nat.Partrec f ∧ f ∈ Quality) ∧
                     (∃ g, Nat.Partrec g ∧ g ∉ Quality))
     -- At each level of the regress, a verifier is itself a program
-    (verifier_chain : ℕ → Code) :
+    (_verifier_chain : ℕ → Code) :
     -- No level in the chain can computably verify the next level's quality
-    ∀ k, ¬ ComputablePred (fun (c : Code) => Code.eval c ∈ Quality) := by
-  intro k
-  exact verification_failure_rice Quality h_nontrivial
+    ∀ (_k : ℕ), ¬ ComputablePred (fun (c : Code) => Code.eval c ∈ Quality) :=
+  fun _ => verification_failure_rice Quality h_nontrivial
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Asymmetry Note
