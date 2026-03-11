@@ -9,6 +9,8 @@
 \usepackage{enumitem}
 \usepackage{hyperref}
 \usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage{url}
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -31,14 +33,14 @@
 \DeclareMathOperator{\diam}{diam}
 
 \title{\textbf{On the Impossibility of Autonomous Self-Improvement\\to General Intelligence in Stochastic Language Models:\\A Formal Proof via Information Theory, G\"{o}delian Limits,\\and Distributional Collapse}\\[10pt]\large Revised Edition with Counterargument Analysis}
-\author{}
-\date{}
+\author{Filip Pajalic}
+\date{2025}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We prove that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement without external human influence, converge to artificial general intelligence (AGI). We formalize the LLM as a conditional probability estimator trained via maximum likelihood on a fixed distributional support and establish independent impossibility results: (1) the information-theoretic ceiling imposed by training data entropy; (2) distributional collapse under recursive self-training; (3) G\"{o}delian incompleteness bounds on self-verification, with an analysis of why these bounds apply asymmetrically to computational systems but not to quantum-biological systems such as the human brain; (4) the stochastic gradient descent fixed-point trap; (5) the fundamental gap between statistical pattern completion and general reasoning; (6) the computational complexity barrier, showing that self-improvement requires solving NP-hard optimization at each step, and that LLMs' own failure on NP-hard problems despite massive statistical exposure constitutes empirical evidence for $\mathrm{P} \neq \mathrm{NP}$, which strengthens the impossibility; (7) the context-computation paradox, showing that self-correction requires resources that grow without bound relative to the system's finite processing capacity; and (8) error compounding under recursive self-modification. We address counterarguments regarding inference-time search, reinforcement learning with self-play, and tool-augmented systems, showing that each either falls within the proof's scope or constitutes external human influence that confirms rather than refutes the central claim. The conjunction of these results establishes that autonomous AGI emergence from the stochastic language modeling framework is not an engineering challenge but a mathematical impossibility.
+We prove that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement without external human influence, converge to artificial general intelligence (AGI). We formalize the LLM as a conditional probability estimator trained via maximum likelihood on a fixed distributional support and establish independent impossibility results: (1) the information-theoretic ceiling imposed by training data entropy; (2) distributional collapse under recursive self-training; (3) G\"{o}delian incompleteness bounds on self-verification, with an analysis of why these bounds apply asymmetrically to computational systems but not to quantum-biological systems such as the human brain; (4) the stochastic gradient descent fixed-point trap; (5) the fundamental gap between statistical pattern completion and general reasoning; (6) the computational complexity barrier, showing that self-improvement requires solving NP-hard optimization at each step, and that LLMs' own failure on NP-hard problems despite massive statistical exposure constitutes empirical evidence for $\mathrm{P} \neq \mathrm{NP}$, which strengthens the impossibility; (7) the context-computation paradox, showing that self-correction requires resources that grow without bound relative to the system's finite processing capacity; and (8) error compounding under recursive self-modification. We address counterarguments regarding inference-time search, reinforcement learning with self-play, tool-augmented systems, and multi-agent architectures, showing that each either falls within the proof's scope or constitutes external human influence that confirms rather than refutes the central claim. We further provide a control theory perspective showing that LLMs violate the fundamental prerequisites for self-regulation, and present empirical corroboration from the SWE-CI benchmark, where 18~models across 100~long-term code maintenance tasks exhibit the predicted error divergence and regression patterns. The conjunction of these results establishes that autonomous AGI emergence from the stochastic language modeling framework is not an engineering challenge but a mathematical impossibility.
 \end{abstract}
 
 \tableofcontents
@@ -150,7 +152,7 @@ I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_0}; p_{\mathrm{tru
 \end{theorem}
 
 \begin{proof}
-The self-generated dataset $\mathcal{D}_k^{\mathrm{self}}$ is produced by sampling from $p_{\bm{\theta}_k}$. By the data processing inequality, for the Markov chain:
+The self-generated dataset $\mathcal{D}_k^{\mathrm{self}}$ is produced by sampling from $p_{\bm{\theta}_k}$. By the data processing inequality~\cite{cover2006}, for the Markov chain:
 \begin{equation}
 p_{\mathrm{true}} \to \mathcal{D}_{\mathrm{train}} \to \bm{\theta}_0 \to p_{\bm{\theta}_0} \to \mathcal{D}_0^{\mathrm{self}} \to \bm{\theta}_1 \to \cdots \to \bm{\theta}_k
 \end{equation}
@@ -215,7 +217,7 @@ This objection confirms rather than refutes our thesis. Consider what ``selectin
     \item This verifier must encode knowledge of what constitutes a ``good'' solution.
     \item This knowledge was designed by humans.
 \end{enumerate}
-In AlphaZero, the verifier is the game rules---a compact, perfect, human-designed evaluation function. In RLHF, the reward model is trained on human preferences. In best-of-$N$ sampling with a code interpreter, the interpreter was human-engineered.
+In AlphaZero~\cite{silver2017alphazero}, the verifier is the game rules---a compact, perfect, human-designed evaluation function. In RLHF~\cite{ouyang2022rlhf}, the reward model is trained on human preferences. In best-of-$N$ sampling with a code interpreter, the interpreter was human-engineered.
 
 Every filtering mechanism that breaks distributional collapse does so by introducing an external signal. By Definition~\ref{def:human}, this constitutes human influence. Our proof explicitly addresses the case where no such external signal exists. If you need filtering to avoid collapse, you need human influence to avoid collapse. That is our point.
 
@@ -302,7 +304,7 @@ If any of these quantum processes contribute to cognitive state transitions, the
 \underbrace{\text{Human brain}}_{\text{quantum-biological}} \quad \xrightarrow{\text{G\"{o}del does not apply}} \quad \text{not subject to these bounds}
 \end{equation}
 
-This does not require accepting Penrose's specific microtubule hypothesis. It requires only the weaker claim that quantum effects at the molecular level influence neural computation---a claim supported by the physics of ion channels, synaptic vesicle release, and molecular binding, all of which operate at scales where quantum effects are non-negligible.
+This does not require accepting Penrose's specific microtubule hypothesis~\cite{penrose1994}. It requires only the weaker claim that quantum effects at the molecular level influence neural computation---a claim supported by the physics of ion channels, synaptic vesicle release, and molecular binding, all of which operate at scales where quantum effects are non-negligible.
 
 Therefore, the fact that humans can self-improve does not imply that formal computational systems can. The situations are not symmetric.
 \end{response}
@@ -348,7 +350,7 @@ We exhibit three classes of functions that are computable but unreachable by pat
 
 \textbf{(a) G\"{o}del-undecidable theorems:} For any consistent formal system $\mathcal{F}$ (including the implicit system represented by all mathematical text in $\mathcal{D}_{\mathrm{train}}$), there exist true mathematical statements not provable within $\mathcal{F}$. Their proofs cannot be found by pattern-matching on existing proofs.
 
-\textbf{(b) Kolmogorov-complex algorithms:} Let $f$ be a function with Kolmogorov complexity $K(f) > K_{\max}(\mathcal{D}_{\mathrm{train}})$. Then $f$ cannot be reconstructed from patterns in $\mathcal{D}_{\mathrm{train}}$.
+\textbf{(b) Kolmogorov-complex algorithms~\cite{kolmogorov1965}:} Let $f$ be a function with Kolmogorov complexity $K(f) > K_{\max}(\mathcal{D}_{\mathrm{train}})$. Then $f$ cannot be reconstructed from patterns in $\mathcal{D}_{\mathrm{train}}$.
 
 \textbf{(c) Empirical facts:} Knowledge about the physical world not recorded in $\mathcal{D}_{\mathrm{train}}$ and not logically derivable from it requires observation, which a closed-loop text system cannot perform.
 \end{proof}
@@ -660,10 +662,196 @@ Each of these either introduces human influence or leaves the stochastic paradig
 
 \subsection{The Stochastic Parrot, Formalized}
 
-Our results provide mathematical grounding for the characterization of LLMs as ``stochastic parrots.'' The model is a conditional probability estimator: $p_{\bm{\theta}}(x_t \mid x_{<t})$. Self-improvement within this framework is self-distillation: the parrot learning to parrot itself. The output may become more fluent, more consistent, more confident---but it cannot become more \emph{correct} about things absent from training, more \emph{creative} beyond recombination of observed patterns, or more \emph{general} than the information-theoretic ceiling permits.
+Our results provide mathematical grounding for the characterization of LLMs as ``stochastic parrots''~\cite{bender2021stochastic}. The model is a conditional probability estimator: $p_{\bm{\theta}}(x_t \mid x_{<t})$. Self-improvement within this framework is self-distillation: the parrot learning to parrot itself. The output may become more fluent, more consistent, more confident---but it cannot become more \emph{correct} about things absent from training, more \emph{creative} beyond recombination of observed patterns, or more \emph{general} than the information-theoretic ceiling permits.
 
 \subsection{Human Influence Is Provably Necessary}
 
-The central conclusion is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a mathematically necessary component of that improvement}. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, the intelligence driving LLM progress originates in human cognition. The singularity scenario---in which this dependency is severed and the AI improves autonomously---requires violations of the data processing inequality, G\"{o}del's incompleteness theorems, and fundamental properties of stochastic optimization. It is not an engineering challenge. It is a mathematical impossibility within the framework.
+The central conclusion is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a mathematically necessary component of that improvement}. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, the intelligence driving LLM progress originates in human cognition. The singularity scenario~\cite{bostrom2014}---in which this dependency is severed and the AI improves autonomously---requires violations of the data processing inequality, G\"{o}del's incompleteness theorems, and fundamental properties of stochastic optimization. It is not an engineering challenge. It is a mathematical impossibility within the framework.
+
+\subsection{A Control Theory Perspective}
+\label{sec:control}
+
+Control theory provides an intuitive framing for the central impossibility. A feedback control system works because the controller is \emph{independent} of the plant. A thermostat is not made of the same heat it regulates.
+
+An LLM attempting to regulate itself is simultaneously the plant and the controller. The sensor, actuator, and error estimator are all the same stochastic process with the same systematic biases. When the system drifts, the component detecting the drift has drifted by the same amount in the same direction.
+
+In control theory terms, the controller's noise is coupled to the plant's noise with correlation approaching~$1$. This violates the fundamental assumption that makes feedback control work: independent error correction.
+
+More precisely, classical control theory requires four prerequisites that LLMs violate:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Observable state.} The meaningful state of an LLM is the distribution $p_{\bm{\theta}}$ over all possible inputs---a function over an exponentially large space. This state is not observable; it can only be sampled. No finite number of samples characterizes the distribution.
+    \item \textbf{Plant model.} The relationship between parameter changes $\Delta\bm{\theta}$ and behavioral changes $\Delta p_{\bm{\theta}}$ is nonlinear, non-convex, and not characterizable in closed form. No transfer function exists. Without a plant model, no controller can compute corrective inputs.
+    \item \textbf{Measurable error signal.} Feedback control requires $e(t) = r(t) - y(t)$, where $r(t)$ is a reference signal. The reference signal for ``general intelligence'' would require a complete specification of AGI---which loops back to the verification problem of Theorem~\ref{thm:godel}.
+    \item \textbf{Stability guarantees.} Lyapunov stability and BIBO stability require structural properties (linearity, bounded gain, known dynamics) that LLM training dynamics lack. The self-training loop has no Lyapunov function guaranteeing convergence.
+\end{enumerate}
+
+A PID controller on a motor works because you can measure the angle, you know the transfer function, and the error signal is trivially defined. An LLM fails on all three. The system is unobservable, uncharacterizable, and has no well-defined reference signal. Self-regulation under these conditions is not an engineering problem to be solved---it is a category error.
+
+\subsection{The Multi-Agent Correlation Problem}
+\label{sec:multiagent}
+
+\begin{objection}[Multiple Agents Checking Each Other]
+What if we deploy multiple LLM agents in a pipeline---an ``architect'' that diagnoses problems and a ``programmer'' that implements fixes, or a ``generator'' and a ``critic''---so that they provide independent error correction for each other?
+\end{objection}
+
+\begin{response}
+This does not work because the agents' errors are correlated. Multiple agents derived from the same (or similar) training distributions share:
+\begin{itemize}[nosep]
+    \item The same training data $\implies$ the same blind spots,
+    \item The same pretraining objective $\implies$ the same systematic biases,
+    \item The same failure modes on edge cases and distribution-boundary inputs.
+\end{itemize}
+
+Let $\delta_{\mathrm{gen}}$ be the error introduced by the generator and $\delta_{\mathrm{crit}}$ be the error in the critic's evaluation. For independent correction, we need:
+\begin{equation}
+\mathrm{Corr}(\delta_{\mathrm{gen}}, \delta_{\mathrm{crit}}) \approx 0
+\end{equation}
+But since both agents are functions of the same training distribution $\mathcal{D}_{\mathrm{train}}$:
+\begin{equation}
+\mathrm{Corr}(\delta_{\mathrm{gen}}, \delta_{\mathrm{crit}}) \to 1 \quad \text{as overlap in training data} \to 1
+\end{equation}
+
+When the generator introduces a subtle bug, the critic has the same blind spot because it learned from the same distribution. The errors \emph{resonate}---they reinforce rather than cancel.
+
+This generalizes to any number of agents: $n$ agents with correlated errors provide strictly less than $n$ independent checks. In the limit of identical training distributions, $n$~agents provide exactly one independent perspective, regardless of~$n$. The correlation is not in the architecture---it is in the training distribution. You cannot escape it by factoring the agent into components.
+
+The SWE-CI benchmark~\cite{chen2025sweci} provides direct empirical evidence: its dual-agent architecture (Architect + Programmer) still exhibits regressions in over 75\% of tasks despite the agents checking each other (see Section~\ref{sec:sweci}).
+
+The only way to decorrelate errors is to introduce a signal from outside the distribution---which is human influence by Definition~\ref{def:human}.
+\end{response}
+
+\subsection{Why Noise Cannot Substitute for Human Influence}
+\label{sec:noise}
+
+A natural objection to the multi-agent correlation problem is: ``Add randomness to decorrelate the agents.'' This fails because of Theorem~\ref{thm:info_ceiling}.
+
+White noise is statistically independent of the model's errors but carries zero mutual information with ground truth:
+\begin{equation}
+I(\text{noise};\, p_{\mathrm{true}}) = 0
+\end{equation}
+Adding noise to the model's output:
+\begin{equation}
+I(p_{\bm{\theta}_k} + \text{noise};\, p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_k};\, p_{\mathrm{true}})
+\end{equation}
+by the data processing inequality. Information is \emph{lost}, not gained. The noise decorrelates the agents' errors in random directions, not toward correctness. The result is agents that disagree more often, but not agents that disagree \emph{usefully}.
+
+What is needed is not independence alone---it is \emph{informed} independence. The external corrector must have mutual information with ground truth that is statistically independent of the model's errors. A human reviewer satisfies this: their knowledge originates from a completely different process (biological cognition, real-world embodied experience) and correlates with ground truth through a different channel.
+
+In control theory terms (Section~\ref{sec:control}): adding noise to the sensor does not improve the state estimate. What is needed is a \emph{second sensor} that measures the actual system through a different physical principle. Human oversight is that second sensor.
+
+\subsection{Empirical Corroboration: The SWE-CI Benchmark}
+\label{sec:sweci}
+
+Independent empirical evidence for the theoretical results of this paper is provided by SWE-CI (Software Engineering---Continuous Integration)~\cite{chen2025sweci}, the first repository-level benchmark evaluating LLM agent capabilities in maintaining codebases over iterative CI loops.
+
+\subsubsection{Experimental Setup}
+SWE-CI comprises 100 tasks drawn from 68 real-world repositories, with each task spanning an average of 233~days and 71~consecutive commits of authentic evolutionary history. The benchmark evaluates 18~models from 8~providers, consuming over 10~billion tokens. The iteration cycle---run tests, define requirements, modify code, repeat---instantiates precisely the autonomous self-improvement loop of Definition~\ref{def:selfimprove}, applied to code rather than model weights.
+
+SWE-CI employs an Architect--Programmer dual-agent protocol: the Architect identifies functional gaps and issues requirements; the Programmer implements them. This is an explicit attempt at independent error correction through role decomposition.
+
+\subsubsection{Key Result: Zero-Regression Rate}
+The zero-regression rate measures the fraction of tasks in which the agent never regresses---that is, never breaks a previously passing test throughout the entire maintenance process. This metric directly corresponds to whether $\delta_k > 0$ (undetectable degradation) occurs in our error model (Theorem~\ref{thm:error_compound}).
+
+\textbf{Result: Most models achieve a zero-regression rate below 0.25.} In over 75\% of tasks, the agent introduces at least one regression. Only two models in the Claude Opus series exceed a zero-regression rate of~0.5, meaning even the best models regress in roughly half of all tasks. This is a direct, large-scale measurement of $\delta_k > 0$.
+
+\subsubsection{Mapping to Theoretical Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lp{9.5cm}@{}}
+\toprule
+\textbf{Theorem} & \textbf{SWE-CI Evidence} \\
+\midrule
+\ref{thm:error_compound} (Error Divergence) & Zero-regression rate ${<}\,0.25$ for most models: regressions occur in 75\%+ of tasks, directly measuring $\delta_k > 0$ \\[4pt]
+\ref{thm:collapse} (Distributional Collapse) & Agent quality degrades over longer iteration sequences; EvoScore with $\gamma > 1$ penalizes models that accumulate technical debt \\[4pt]
+Sec.~\ref{sec:multiagent} (Correlated Corrector) & Dual-agent architecture (Architect + Programmer) still fails at comparable rates---role decomposition does not provide independent error correction \\[4pt]
+Sec.~\ref{sec:control} (Human Influence) & Model improvement across the evaluation period comes only from human-driven releases (new architectures, training data, RLHF), not from autonomous iteration \\
+\bottomrule
+\end{tabular}
+\caption{Mapping between theoretical impossibility results and SWE-CI empirical observations.}
+\label{tab:sweci}
+\end{table}
+
+\subsubsection{Within-Run Degradation vs.\ Across-Release Improvement}
+
+SWE-CI's results reveal a striking asymmetry. \emph{Within} an autonomous run (the CI iteration loop), quality degrades: regressions accumulate, technical debt compounds, and the agent's ability to maintain the codebase deteriorates over successive iterations. \emph{Across} model releases (Claude Sonnet to Claude Opus, GPT-4o to GPT-o3, etc.), performance improves steadily.
+
+This asymmetry is precisely what the theory predicts. Autonomous iteration (no human influence) leads to error divergence (Theorem~\ref{thm:error_compound}) and distributional collapse (Theorem~\ref{thm:collapse}). Inter-release improvement reflects human-driven development: new architectures, curated training data, human-designed reward functions, and engineering effort. The intelligence driving progress across releases originates in human cognition---confirming that human influence is provably necessary (Section~10.4).
+
+The SWE-CI benchmark thus provides large-scale empirical corroboration, across 18~models and 100~tasks, that the theoretical impossibility results established in this paper are not merely mathematical artifacts but observable phenomena in deployed systems~\cite{chen2025sweci,shumailov2024model}.
+
+%% ============================================================
+%% Bibliography
+%% ============================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{shannon1948}
+C.~E. Shannon.
+\newblock A mathematical theory of communication.
+\newblock \emph{Bell System Technical Journal}, 27(3):379--423, 1948.
+
+\bibitem{cover2006}
+T.~M. Cover and J.~A. Thomas.
+\newblock \emph{Elements of Information Theory}.
+\newblock Wiley-Interscience, 2nd edition, 2006.
+
+\bibitem{godel1931}
+K.~G\"{o}del.
+\newblock \"{U}ber formal unentscheidbare {S}\"{a}tze der {P}rincipia {M}athematica und verwandter {S}ysteme {I}.
+\newblock \emph{Monatshefte f\"{u}r Mathematik und Physik}, 38:173--198, 1931.
+
+\bibitem{rice1953}
+H.~G. Rice.
+\newblock Classes of recursively enumerable sets and their decision problems.
+\newblock \emph{Transactions of the American Mathematical Society}, 74(2):358--366, 1953.
+
+\bibitem{shumailov2024model}
+I.~Shumailov, Z.~Shumaylov, Y.~Zhao, N.~Papernot, R.~Anderson, and Y.~Gal.
+\newblock {AI} models collapse when trained on recursively generated data.
+\newblock \emph{Nature}, 631:755--759, 2024.
+
+\bibitem{bender2021stochastic}
+E.~M. Bender, T.~Gebru, A.~McMillan-Major, and S.~Shmitchell.
+\newblock On the dangers of stochastic parrots: Can language models be too big?
+\newblock In \emph{Proceedings of FAccT}, pages 610--623, 2021.
+
+\bibitem{chen2025sweci}
+J.~Chen, X.~Xu, H.~Wei, C.~Chen, and B.~Zhao.
+\newblock {SWE-CI}: Evaluating agent capabilities in maintaining codebases via continuous integration.
+\newblock \emph{arXiv preprint arXiv:2603.03823}, 2025.
+
+\bibitem{silver2017alphazero}
+D.~Silver, T.~Hubert, J.~Schrittwieser, I.~Antonoglou, M.~Lai, A.~Guez, M.~Lanctot, L.~Sifre, D.~Kumaran, T.~Graepel, T.~Lillicrap, K.~Simonyan, and D.~Hassabis.
+\newblock Mastering chess and shogi by self-play with a general reinforcement learning algorithm.
+\newblock \emph{arXiv preprint arXiv:1712.01815}, 2017.
+
+\bibitem{vaswani2017attention}
+A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez, \L.~Kaiser, and I.~Polosukhin.
+\newblock Attention is all you need.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume~30, 2017.
+
+\bibitem{penrose1994}
+R.~Penrose.
+\newblock \emph{Shadows of the Mind: A Search for the Missing Science of Consciousness}.
+\newblock Oxford University Press, 1994.
+
+\bibitem{bostrom2014}
+N.~Bostrom.
+\newblock \emph{Superintelligence: Paths, Dangers, Strategies}.
+\newblock Oxford University Press, 2014.
+
+\bibitem{ouyang2022rlhf}
+L.~Ouyang, J.~Wu, X.~Jiang, D.~Almeida, C.~Wainwright, P.~Mishkin, C.~Zhang, S.~Agarwal, K.~Slama, A.~Ray, et~al.
+\newblock Training language models to follow instructions with human feedback.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume~35, 2022.
+
+\bibitem{kolmogorov1965}
+A.~N. Kolmogorov.
+\newblock Three approaches to the quantitative definition of information.
+\newblock \emph{Problems of Information Transmission}, 1(1):1--7, 1965.
+
+\end{thebibliography}
 
 \end{document}

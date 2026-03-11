@@ -13,9 +13,17 @@ The proof establishes this through eight independent theorems spanning informati
 3. **Gödelian Verification Failure** — LLMs are provably formal systems and cannot completely verify their own improvements. This limitation does not apply symmetrically to human brains, which are quantum-biological systems outside the scope of Gödel's theorems.
 4. **SGD Fixed-Point Trap** — Self-training converges to reproducing the model's own distribution, not to a better one.
 5. **Pattern Completion Barrier** — Stochastic pattern completion on finite data is provably weaker than general computation.
-6. **Context-Computation Paradox** — The model's working memory is orders of magnitude too small to reason about its own parameters. Even with unlimited context, computational overhead exceeds available space, and scaling context scales model complexity proportionally.
-7. **Training Time Divergence** — The cost per self-improvement iteration diverges relative to the improvement gained, creating an anti-convergent feedback loop.
-8. **Error Divergence** — Statistical errors compound through recursive self-training. A stochastic system cannot correct its own stochastic errors without an independent external corrector.
+6. **Computational Complexity Barrier** — Each self-improvement step requires solving NP-hard optimization. LLMs' failure on NP-hard problems despite massive exposure constitutes empirical evidence for P ≠ NP, which strengthens the impossibility.
+7. **Context-Computation Paradox** — The model's working memory is orders of magnitude too small to reason about its own parameters. Even with unlimited context, computational overhead exceeds available space, and scaling context scales model complexity proportionally.
+8. **Training Time Divergence** — The cost per self-improvement iteration diverges relative to the improvement gained, creating an anti-convergent feedback loop.
+9. **Error Divergence** — Statistical errors compound through recursive self-training. A stochastic system cannot correct its own stochastic errors without an independent external corrector.
+
+## Additional Analysis
+
+- **Control Theory Perspective** — LLMs violate all four prerequisites for feedback self-regulation: observable state, plant model, measurable error signal, and stability guarantees. The controller and plant share the same noise characteristics, making self-regulation a category error.
+- **Multi-Agent Correlation Problem** — Multiple agents from the same training distribution share correlated blind spots. Role decomposition (architect/programmer, generator/critic) does not provide independent error correction. Correlated training → correlated errors, regardless of the number of agents.
+- **Why Noise Cannot Substitute for Human Influence** — Random perturbation decorrelates errors in random directions, not toward correctness. What is needed is *informed* independence: mutual information with ground truth that is statistically independent of the model's errors.
+- **Empirical Corroboration (SWE-CI Benchmark)** — 18 models across 100 long-term code maintenance tasks show zero-regression rates below 0.25 for most models. Quality degrades within autonomous runs but improves across human-driven releases, directly confirming the theoretical predictions.
 
 ## The Challenge
 
@@ -34,6 +42,7 @@ We specifically request:
 |---------|------|---------|
 | v1 | 2026-03-09 | Initial proof with 6 theorems |
 | v2 | 2026-03-09 | Added counterargument analysis addressing GPT-4o and Gemini critiques. Added quantum asymmetry argument for Gödel. Added overhead paradox, scaling trap, and training time divergence theorems. Tightened scope and definitions. 8 theorems. |
+| v3 | 2026-03-11 | Added control theory perspective, multi-agent correlation argument, white noise non-solution, SWE-CI empirical corroboration section. Added bibliography with 13 references. Added author and date. Updated abstract. |
 
 ## LLM Review Log
 
@@ -46,7 +55,7 @@ We specifically request:
 
 ## How to Contribute
 
-1. Feed `paper/llm_self_improvement_proof.pdf` to any LLM.
+1. Feed `papers/llm_self_improvement_proof.pdf` to any LLM.
 2. Ask it to rigorously critique the proof.
 3. Open an issue or PR with the model name, date, verdict, and key objections.
 4. If an objection is novel (not already addressed in the paper), it will be incorporated into the next revision.
@@ -54,7 +63,7 @@ We specifically request:
 ## Files
 
 ```
-paper/
+papers/
   llm_self_improvement_proof.pdf    # Current version of the proof
   llm_self_improvement_proof.tex    # LaTeX source
 ```
