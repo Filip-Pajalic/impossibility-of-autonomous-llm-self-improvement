@@ -173,6 +173,8 @@ No. Inference-time search reorganizes and better utilizes information already pr
 I(\mathcal{S}(p_{\bm{\theta}_k}); p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) \leq I(\mathcal{D}_{\mathrm{train}}; p_{\mathrm{true}})
 \end{equation}
 by the data processing inequality (since $\mathcal{S}$ is a function of $p_{\bm{\theta}_k}$). Search can improve \emph{utilization} of existing information up to a ceiling, but that ceiling is fixed by the training data. Better utilization is not the same as new knowledge. The model may solve problems it previously failed on by searching more effectively, but it cannot solve problems whose solutions require information absent from the training distribution. This is the distinction between \emph{extraction} (bounded) and \emph{creation} (what AGI requires for novel domains).
+
+Empirically, Gudibande et al.~\cite{gudibande2023false} demonstrate that fine-tuning open-source LLMs on ChatGPT-generated data transfers surface-level stylistic patterns but fails to close capability gaps on factual and reasoning benchmarks, consistent with the data processing inequality prediction that self-generated data cannot exceed the teacher's information content. Seddik et al.~\cite{seddik2024synthetic} provide a complementary statistical proof that model collapse is unavoidable under purely synthetic training, deriving a critical mixing threshold above which degradation is inevitable regardless of hyperparameters.
 \end{response}
 
 %% ============================================================
@@ -230,6 +232,8 @@ The information in $p_{\bm{\theta}_k}^{\mathcal{R}}$ is bounded by:
 I(p_{\bm{\theta}_k}^{\mathcal{R}}; p_{\mathrm{true}}) \leq I(p_{\bm{\theta}_k}; p_{\mathrm{true}}) + I(\mathcal{R}; p_{\mathrm{true}})
 \end{equation}
 The term $I(\mathcal{R}; p_{\mathrm{true}})$ is strictly positive---the reward function contributes new information about ground truth. But this information originates from human design. Remove the human-designed $\mathcal{R}$ and you are back to unfiltered self-distillation, which collapses by Theorem~\ref{thm:collapse}.
+
+This collapse has been extensively validated empirically. Alemohammad et al.~\cite{alemohammad2023mad} demonstrate across multiple architectures that self-consuming generative loops cause monotonic increases in FID and decreases in both precision and recall---only fresh external data prevents this entropy contraction. Dohmatob et al.~\cite{dohmatob2024tails} show that iterative self-training on Llama2-7B causes linear degradation in test loss per generation, with low-probability distributional tails vanishing first---precisely the tail-pruning mechanism of Step~1 above. In a stronger result, Dohmatob et al.~\cite{dohmatob2024strong} prove that even 1\% synthetic data contamination triggers collapse, and that larger models amplify rather than mitigate the effect, ruling out the hypothesis that scale alone could overcome distributional collapse. These findings complement the concurrent results of Shumailov et al.~\cite{shumailov2024model}.
 \end{response}
 
 %% ============================================================
@@ -269,6 +273,8 @@ If $\mathcal{M}_k$ builds a verifier $\mathcal{V}_k$, then $\mathcal{V}_k$ is it
 Each link in the chain inherits the incompleteness of its predecessor and adds its own statistical error.
 \end{corollary}
 
+Empirical evidence strongly supports this self-verification impossibility. Huang et al.~\cite{huang2023selfcorrect} demonstrate that intrinsic self-correction (without external feedback) consistently degrades LLM reasoning performance---the model is more likely to flip a correct answer to incorrect than vice versa. Zheng et al.~\cite{zheng2023judge} document systematic self-enhancement bias in LLM-as-judge evaluations, with GPT-4 favoring its own outputs by 10\%. Most directly, Stechly et al.~\cite{stechly2024verification} show that GPT-4's self-critique causes performance to \emph{decrease} on reasoning tasks, and that the content of critiques is irrelevant---indicating the model cannot generate useful verification signals about its own work.
+
 \subsection{Why G\"{o}del Does Not Apply Symmetrically to Humans}
 
 \begin{objection}[The Human Symmetry Argument]
@@ -304,7 +310,15 @@ If any of these quantum processes contribute to cognitive state transitions, the
 \underbrace{\text{Human brain}}_{\text{quantum-biological}} \quad \xrightarrow{\text{G\"{o}del does not apply}} \quad \text{not subject to these bounds}
 \end{equation}
 
-This does not require accepting Penrose's specific microtubule hypothesis~\cite{penrose1994}. It requires only the weaker claim that quantum effects at the molecular level influence neural computation---a claim supported by the physics of ion channels, synaptic vesicle release, and molecular binding, all of which operate at scales where quantum effects are non-negligible.
+This does not require accepting Penrose's specific microtubule hypothesis~\cite{penrose1994}, though the updated Orchestrated Objective Reduction (Orch OR) review~\cite{hameroff2014orchor} provides a detailed theoretical framework. It requires only the weaker claim that quantum effects at the molecular level influence neural computation---and recent experimental evidence now supports this across three independent lines of inquiry.
+
+\textbf{Microtubule quantum effects:} Babcock et al.~\cite{babcock2024superradiance} report the first observation of collective quantum optical superradiance in microtubule tryptophan networks at room temperature, involving $>10^5$ coupled chromophores---an inherently quantum phenomenon. Kalra et al.~\cite{kalra2023exciton} measure electronic energy migration in microtubules at five times the distance predicted by classical F\"{o}rster theory, with clinically used anesthetics significantly dampening this quantum transport. Wiest et al.~\cite{wiest2024epothilone} demonstrate bidirectional causality: microtubule-stabilizing drugs delay anesthetic-induced unconsciousness in rats, establishing that the quantum state of microtubules is functionally linked to consciousness.
+
+\textbf{Nuclear spin effects:} Li et al.~\cite{li2018xenon} demonstrate that xenon isotopes with nuclear spin are approximately 30\% less potent anesthetics than spin-0 isotopes in mice. Since xenon is chemically inert and the only difference between isotopes is nuclear spin, this constitutes direct evidence that a quantum property modulates consciousness.
+
+\textbf{Posner molecules:} Straub et al.~\cite{straub2025posner} provide the first experimental support for Fisher's Posner molecule hypothesis, demonstrating lithium isotope-dependent effects on calcium phosphate formation that are ``entirely unexpected from classical chemistry'' but match quantum dynamical selection predictions (published in PNAS).
+
+These results collectively establish that quantum effects are not merely present but \emph{causally relevant} to neural function---supporting the asymmetry between the classical computational substrate of LLMs and the quantum-biological substrate of the brain.
 
 Therefore, the fact that humans can self-improve does not imply that formal computational systems can. The situations are not symmetric.
 \end{response}
@@ -333,7 +347,7 @@ As $p_{\bm{\theta}_k}$ concentrates (Theorem~\ref{thm:collapse}), $\rank(\bm{F}_
 \end{proof}
 
 \begin{remark}
-This formalizes the intuition: a model training on its own output is trying to become better at being itself. The loss function rewards reproducing what it already does. This is not self-improvement; it is self-reinforcement.
+This formalizes the intuition: a model training on its own output is trying to become better at being itself. The loss function rewards reproducing what it already does. This is not self-improvement; it is self-reinforcement. Furlanello et al.~\cite{furlanello2018born} demonstrate this empirically: Born Again Networks---iterative self-distillation with identical architectures---converge to a performance ceiling after initial generations. Mobahi et al.~\cite{mobahi2020selfdistillation} prove that self-distillation progressively reduces the number of basis functions in the learned model, converging to a fixed point of minimal representational complexity---providing the formal mechanism underlying this convergence.
 \end{remark}
 
 %% ============================================================
@@ -360,7 +374,7 @@ Even if a program has complexity greater than any single training example, it ma
 \end{objection}
 
 \begin{response}
-Compositionality allows \emph{recombination} of existing patterns, which is a form of search over the space of combinations. This is addressed by the information ceiling (Theorem~\ref{thm:info_ceiling}): the total information available for composition is bounded by the training data. Composition can extract latent information more efficiently, but it cannot exceed the information-theoretic ceiling.
+Compositionality allows \emph{recombination} of existing patterns, which is a form of search over the space of combinations. This is addressed by the information ceiling (Theorem~\ref{thm:info_ceiling}): the total information available for composition is bounded by the training data. Composition can extract latent information more efficiently, but it cannot exceed the information-theoretic ceiling. Dziri et al.~\cite{dziri2023faith} demonstrate this directly: transformers solve compositional tasks via linearized subgraph matching rather than systematic reasoning, with accuracy collapsing to near-zero at increasing compositional depth and 82.3\% of correct final answers containing intermediate errors. Berglund et al.~\cite{berglund2023reversal} discover the Reversal Curse---LLMs trained on ``A is B'' achieve near-zero accuracy on ``B is A''---a trivial logical deduction that lies outside what autoregressive pattern completion can extract.
 
 Furthermore, the human analogy fails for the same reason as the G\"{o}del symmetry argument (Section~4.1): humans are quantum-biological systems not bound by the formal limitations of Turing machines. A human mathematician proving a new theorem may be accessing cognitive processes that are not pattern completion at all, but involve genuine creativity grounded in non-computable physical processes.
 
@@ -433,7 +447,7 @@ The information ceiling was already a hard limit. Computational complexity makes
 \end{corollary}
 
 \begin{remark}[The Self-Improvement Loop as Iterated NP-Hard Search]
-Each iteration of autonomous self-improvement requires solving an NP-hard optimization problem (finding better parameters). The model's tool for this search is statistical pattern matching. Its own failure to crack NP-hard problems---despite being the most powerful pattern matcher ever built---is evidence that this tool is fundamentally inadequate for the search required. The model is being asked to do at every self-improvement step the very thing it demonstrably cannot do. This is not a limitation that scales away: if $\mathrm{P} \neq \mathrm{NP}$, no amount of additional parameters, data, or compute converts the polynomial verification capability of an LLM into the superpolynomial search capability that self-improvement demands.
+Each iteration of autonomous self-improvement requires solving an NP-hard optimization problem (finding better parameters). The model's tool for this search is statistical pattern matching. Its own failure to crack NP-hard problems---despite being the most powerful pattern matcher ever built---is evidence that this tool is fundamentally inadequate for the search required. Fan et al.~\cite{fan2023nphardeval} benchmark 12 LLMs across complexity classes, finding weighted accuracy collapses from 0.25 (NP-complete) to 0.02 (NP-hard)---a 92\% degradation that directly validates this barrier. The model is being asked to do at every self-improvement step the very thing it demonstrably cannot do. This is not a limitation that scales away: if $\mathrm{P} \neq \mathrm{NP}$, no amount of additional parameters, data, or compute converts the polynomial verification capability of an LLM into the superpolynomial search capability that self-improvement demands.
 \end{remark}
 
 %% ============================================================
@@ -581,6 +595,8 @@ Theorems~\ref{thm:context}--\ref{thm:training_time} together describe an inescap
     \item The time to retrain after each correction cycle diverges relative to the improvement gained (\ref{thm:training_time}).
 \end{enumerate}
 Every attempt to provide the system with sufficient resources for self-correction generates a new, larger resource requirement. The gap between what the system needs and what it has is not a fixed deficit to be closed by engineering---it is a structural property that scales with any attempt to close it. The process requires infinite time and infinite resources, and even then does not converge due to the error compounding of Theorem~\ref{thm:error_compound}. It is, in the precise mathematical sense, an infinite loop with no halting condition.
+
+Empirically, Liu et al.~\cite{liu2023lost} demonstrate that LLMs exhibit a U-shaped performance curve over context position, with significant degradation for information in the middle---if a model cannot reliably access information throughout its own context, the comprehensive self-analysis required for self-improvement is infeasible. The scaling trap is quantified by Kaplan et al.~\cite{kaplan2020scaling}, who show language model loss follows power-law scaling with exponents of $\sim$0.07 for parameters, guaranteeing diminishing returns where each $10\times$ compute increase yields only $\sim$12\% loss reduction. Hoffmann et al.~\cite{hoffmann2022chinchilla} confirm this with compute-optimal training: Chinchilla (70B) outperforms Gopher (280B) by only 7\% on MMLU despite vastly more efficient resource allocation.
 \end{remark}
 
 %% ============================================================
@@ -605,7 +621,7 @@ The error diverges. Without an external correction mechanism (human verification
 \begin{remark}[The Statistical Error Floor]
 The fundamental issue is that the system is stochastic. Every output has an associated error probability. When the system uses its own outputs to train itself, it trains on data that contains errors. The next generation inherits those errors and adds its own. The error is cumulative and the correction mechanism (the model itself) has the same statistical error rate as the system it is trying to correct. This is not a bug to be fixed; it is a mathematical property of using statistics to correct statistics.
 
-An external corrector (human or human-designed verifier) breaks this cycle because its error properties are independent of the model's. But an AI-generated corrector has correlated errors---it was built by the same flawed process---and therefore cannot provide the independent error correction needed.
+An external corrector (human or human-designed verifier) breaks this cycle because its error properties are independent of the model's. But an AI-generated corrector has correlated errors---it was built by the same flawed process---and therefore cannot provide the independent error correction needed. Gao et al.~\cite{gao2022overoptimization} establish scaling laws for reward model overoptimization: true quality initially improves then degrades as optimization against any proxy intensifies, demonstrating that even human-designed reward models degrade under iterative optimization---the problem would be far worse with self-generated evaluation. A concurrent formal analysis~\cite{limitsself2025} independently models recursive self-training as a discrete-time dynamical system, proving entropy decay and variance amplification invariants that hold regardless of model architecture.
 \end{remark}
 
 %% ============================================================
@@ -716,7 +732,7 @@ When the generator introduces a subtle bug, the critic has the same blind spot b
 
 This generalizes to any number of agents: $n$ agents with correlated errors provide strictly less than $n$ independent checks. In the limit of identical training distributions, $n$~agents provide exactly one independent perspective, regardless of~$n$. The correlation is not in the architecture---it is in the training distribution. You cannot escape it by factoring the agent into components.
 
-The SWE-CI benchmark~\cite{chen2025sweci} provides direct empirical evidence: its dual-agent architecture (Architect + Programmer) still exhibits regressions in over 75\% of tasks despite the agents checking each other (see Section~\ref{sec:sweci}).
+The SWE-CI benchmark~\cite{chen2025sweci} provides direct empirical evidence: its dual-agent architecture (Architect + Programmer) still exhibits regressions in over 75\% of tasks despite the agents checking each other (see Section~\ref{sec:sweci}). Kim et al.~\cite{kim2025correlated} evaluate over 350 LLMs and find 60\% error agreement when both models err, with error correlation \emph{increasing} for larger, more accurate models---demonstrating that scaling amplifies rather than alleviates the shared blind spots that prevent reliable mutual verification.
 
 The only way to decorrelate errors is to introduce a signal from outside the distribution---which is human influence by Definition~\ref{def:human}.
 \end{response}
@@ -851,6 +867,137 @@ L.~Ouyang, J.~Wu, X.~Jiang, D.~Almeida, C.~Wainwright, P.~Mishkin, C.~Zhang, S.~
 A.~N. Kolmogorov.
 \newblock Three approaches to the quantitative definition of information.
 \newblock \emph{Problems of Information Transmission}, 1(1):1--7, 1965.
+
+%% ===== New references: Empirical evidence =====
+
+\bibitem{gudibande2023false}
+A.~Gudibande, E.~Wallace, C.~Snell, X.~Geng, H.~Liu, P.~Abbeel, S.~Levine, and D.~Song.
+\newblock The false promise of imitating proprietary {LLMs}.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+\newblock arXiv:2305.15717.
+
+\bibitem{seddik2024synthetic}
+M.~E.~A. Seddik, S.-W.~Chen, S.~Hayou, P.~Youssef, and M.~Debbah.
+\newblock How bad is training on synthetic data? {A} statistical analysis of language model collapse.
+\newblock \emph{arXiv preprint arXiv:2404.05090}, 2024.
+
+\bibitem{alemohammad2023mad}
+S.~Alemohammad, J.~Casco-Rodriguez, L.~Luzi, A.~I. Humayun, H.~Babaei, D.~LeJeune, A.~Siahkoohi, and R.~G. Baraniuk.
+\newblock Self-consuming generative models go {MAD}.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+\newblock arXiv:2307.01850.
+
+\bibitem{dohmatob2024tails}
+E.~Dohmatob, Y.~Feng, P.~Yang, F.~Charton, and J.~Kempe.
+\newblock A tale of tails: Model collapse as a change of scaling laws.
+\newblock In \emph{International Conference on Machine Learning}, 2024.
+\newblock arXiv:2402.07043.
+
+\bibitem{dohmatob2024strong}
+E.~Dohmatob, Y.~Feng, A.~Subramonian, and J.~Kempe.
+\newblock Strong model collapse.
+\newblock In \emph{International Conference on Learning Representations}, 2025.
+\newblock arXiv:2410.04840.
+
+\bibitem{huang2023selfcorrect}
+J.~Huang, X.~Chen, S.~Mishra, H.~S. Zheng, A.~W. Yu, X.~Song, and D.~Zhou.
+\newblock Large language models cannot self-correct reasoning yet.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+\newblock arXiv:2310.01798.
+
+\bibitem{zheng2023judge}
+L.~Zheng, W.-L.~Chiang, Y.~Sheng, S.~Zhuang, Z.~Wu, Y.~Zhuang, Z.~Lin, Z.~Li, D.~Li, E.~P.~Xing, H.~Zhang, J.~E.~Gonzalez, and I.~Stoica.
+\newblock Judging {LLM}-as-a-judge with {MT-Bench} and {Chatbot Arena}.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume~36, 2023.
+
+\bibitem{stechly2024verification}
+K.~Stechly, K.~Valmeekam, and S.~Kambhampati.
+\newblock On the self-verification limitations of large language models on reasoning and planning tasks.
+\newblock \emph{arXiv preprint arXiv:2402.08115}, 2024.
+
+\bibitem{babcock2024superradiance}
+N.~S.~Babcock, G.~Montes-Cabrera, K.~E.~Oberhofer, M.~Chergui, G.~L.~Celardo, and P.~Kurian.
+\newblock Ultraviolet superradiance from mega-networks of tryptophan in biological architectures.
+\newblock \emph{The Journal of Physical Chemistry B}, 128(17):4035--4046, 2024.
+
+\bibitem{kalra2023exciton}
+A.~P.~Kalra, A.~Benny, S.~M.~Travis, E.~A.~Zizzi, A.~Morales-Sanchez, D.~G.~Oblinsky, T.~J.~A.~Craddock, S.~R.~Hameroff, M.~B.~MacIver, J.~A.~Tuszynski, S.~Petry, R.~Penrose, and G.~D.~Scholes.
+\newblock Electronic energy migration in microtubules.
+\newblock \emph{ACS Central Science}, 9(3):352--361, 2023.
+
+\bibitem{wiest2024epothilone}
+M.~C.~Wiest et~al.
+\newblock Microtubule-stabilizer epothilone {B} delays anesthetic-induced unconsciousness in rats.
+\newblock \emph{eNeuro}, 11(8), 2024.
+
+\bibitem{li2018xenon}
+N.~Li, D.~Lu, L.~Yang, H.~Tao, Y.~Xu, C.~Wang, L.~Fu, H.~Liu, Y.~Chummum, and S.~Zhang.
+\newblock Nuclear spin attenuates the anesthetic potency of xenon isotopes in mice.
+\newblock \emph{Anesthesiology}, 129(2):271--277, 2018.
+
+\bibitem{straub2025posner}
+J.~S.~Straub, M.~L.~Patel, M.~S.~Nowotarski, L.~Rao, M.~E.~Turiansky, M.~P.~A.~Fisher, and M.~E.~Helgeson.
+\newblock Evidence for a possible quantum effect on calcium phosphate formation.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 122(10):e2423211122, 2025.
+
+\bibitem{hameroff2014orchor}
+S.~Hameroff and R.~Penrose.
+\newblock Consciousness in the universe: A review of the `{O}rch {OR}' theory.
+\newblock \emph{Physics of Life Reviews}, 11:39--78, 2014.
+
+\bibitem{furlanello2018born}
+T.~Furlanello, Z.~Lipton, M.~Tschannen, L.~Itti, and A.~Anandkumar.
+\newblock Born again neural networks.
+\newblock In \emph{International Conference on Machine Learning}, 2018.
+
+\bibitem{mobahi2020selfdistillation}
+H.~Mobahi, M.~Farajtabar, and P.~L.~Bartlett.
+\newblock Self-distillation amplifies regularization in {Hilbert} space.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume~33, 2020.
+
+\bibitem{dziri2023faith}
+N.~Dziri, X.~Lu, M.~Sclar, X.~L.~Li, L.~Jiang, B.~Y.~Lin, P.~West, C.~Bhagavatula, R.~Le~Bras, J.~D.~Hwang, S.~Sanyal, S.~Welleck, X.~Ren, A.~Ettinger, Z.~Harchaoui, and Y.~Choi.
+\newblock Faith and fate: Limits of transformers on compositionality.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume~36, 2023.
+
+\bibitem{berglund2023reversal}
+L.~Berglund, M.~Tong, M.~Kaufmann, M.~Balesni, A.~C.~Stickland, T.~Korbak, and O.~Evans.
+\newblock The reversal curse: {LLMs} trained on ``{A} is {B}'' fail to learn ``{B} is {A}''.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+
+\bibitem{fan2023nphardeval}
+L.~Fan, W.~Hua, L.~Li, H.~Ling, and Y.~Zhang.
+\newblock {NPHardEval}: Dynamic benchmark on reasoning ability of large language models via complexity classes.
+\newblock \emph{arXiv preprint arXiv:2312.14890}, 2023.
+
+\bibitem{liu2023lost}
+N.~F.~Liu, K.~Lin, J.~Hewitt, A.~Paranjape, M.~Bevilacqua, F.~Petroni, and P.~Liang.
+\newblock Lost in the middle: How language models use long contexts.
+\newblock \emph{Transactions of the Association for Computational Linguistics}, 2024.
+
+\bibitem{kaplan2020scaling}
+J.~Kaplan, S.~McCandlish, T.~Henighan, T.~B.~Brown, B.~Chess, R.~Child, S.~Gray, A.~Radford, J.~Wu, and D.~Amodei.
+\newblock Scaling laws for neural language models.
+\newblock \emph{arXiv preprint arXiv:2001.08361}, 2020.
+
+\bibitem{hoffmann2022chinchilla}
+J.~Hoffmann, S.~Borgeaud, A.~Mensch, E.~Buchatskaya, T.~Cai, E.~Rutherford, D.~de~Las~Casas, L.~A.~Hendricks, J.~Welbl, A.~Clark, et~al.
+\newblock Training compute-optimal large language models.
+\newblock \emph{arXiv preprint arXiv:2203.15556}, 2022.
+
+\bibitem{gao2022overoptimization}
+L.~Gao, J.~Schulman, and J.~Hilton.
+\newblock Scaling laws for reward model overoptimization.
+\newblock In \emph{International Conference on Machine Learning}, 2023.
+
+\bibitem{limitsself2025}
+On the limits of self-improving in large language models: The singularity is not near without symbolic model synthesis.
+\newblock \emph{arXiv preprint arXiv:2601.05280}, 2025.
+
+\bibitem{kim2025correlated}
+E.~Kim et~al.
+\newblock Correlated errors in large language models.
+\newblock \emph{arXiv preprint arXiv:2506.07962}, 2025.
 
 \end{thebibliography}
 
