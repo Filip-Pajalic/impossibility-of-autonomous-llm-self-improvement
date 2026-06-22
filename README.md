@@ -59,6 +59,7 @@ We specifically request:
 | GPT-4o | 2026-03-09 | Raised blocking objections | Scope too narrow, Gödel misapplied, AlphaZero counterexample | Addressed in v2 draft revisions; should be rechecked against the v4 proof-program framing. |
 | Gemini | 2026-03-09 | Mixed assessment | Gödel applies to humans too, filtering breaks collapse | Addressed in v2 draft revisions; quantum asymmetry remains a claim to isolate or weaken under the verification plan. |
 | Claude Opus 4 | 2026-03-09 | No blocking objection recorded, with caveats | Gödel section needed quantum asymmetry, scope needed tightening | Incorporated in v2 draft revisions; caveats remain relevant to formal verification. |
+| Codex / GPT-5 | 2026-06-22 | Rejected as completed proof; partially accepted as proof program | Gödelian self-verification/human asymmetry, AGI-definition nontriviality, stale PDF artifact | Opened [issue #5](https://github.com/Filip-Pajalic/impossibility-of-autonomous-llm-self-improvement/issues/5); incorporated AGI-definition and PDF-sync follow-ups into `docs/verification_plan.md`. |
 | | | | *Your model here* | |
 
 ## How to Contribute
