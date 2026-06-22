@@ -32,15 +32,15 @@
 \DeclareMathOperator{\rank}{rank}
 \DeclareMathOperator{\diam}{diam}
 
-\title{\textbf{On the Impossibility of Autonomous Self-Improvement\\to General Intelligence in Stochastic Language Models:\\A Formal Proof via Information Theory, G\"{o}delian Limits,\\and Distributional Collapse}\\[10pt]\large Revised Edition with Counterargument Analysis}
+\title{\textbf{On the Impossibility of Autonomous Self-Improvement\\to General Intelligence in Stochastic Language Models:\\A Proof Program via Information Theory, G\"{o}delian Limits,\\and Distributional Collapse}\\[10pt]\large Revised Edition with Counterargument Analysis}
 \author{Filip Pajalic}
-\date{2025}
+\date{Draft, 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We prove that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement without external human influence, converge to artificial general intelligence (AGI). We formalize the LLM as a conditional probability estimator trained via maximum likelihood on a fixed distributional support and establish independent impossibility results: (1) the information-theoretic ceiling imposed by training data entropy; (2) distributional collapse under recursive self-training; (3) G\"{o}delian incompleteness bounds on self-verification, with an analysis of why these bounds apply asymmetrically to computational systems but not to quantum-biological systems such as the human brain; (4) the stochastic gradient descent fixed-point trap; (5) the fundamental gap between statistical pattern completion and general reasoning; (6) the computational complexity barrier, showing that self-improvement requires solving NP-hard optimization at each step, and that LLMs' own failure on NP-hard problems despite massive statistical exposure constitutes empirical evidence for $\mathrm{P} \neq \mathrm{NP}$, which strengthens the impossibility; (7) the context-computation paradox, showing that self-correction requires resources that grow without bound relative to the system's finite processing capacity; and (8) error compounding under recursive self-modification. We address counterarguments regarding inference-time search, reinforcement learning with self-play, tool-augmented systems, and multi-agent architectures, showing that each either falls within the proof's scope or constitutes external human influence that confirms rather than refutes the central claim. We further provide a control theory perspective showing that LLMs violate the fundamental prerequisites for self-regulation, and present empirical corroboration from the SWE-CI benchmark, where 18~models across 100~long-term code maintenance tasks exhibit the predicted error divergence and regression patterns. The conjunction of these results establishes that autonomous AGI emergence from the stochastic language modeling framework is not an engineering challenge but a mathematical impossibility.
+We develop a proof program for the claim that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement without external human influence, converge to artificial general intelligence (AGI). We model the LLM as a conditional probability estimator trained via maximum likelihood on a fixed distributional support and identify independent barriers requiring formal verification: (1) the information-theoretic ceiling imposed by training data entropy; (2) distributional collapse under recursive self-training; (3) G\"{o}delian and computability bounds on self-verification; (4) the stochastic gradient descent fixed-point trap; (5) the gap between statistical pattern completion and general reasoning; (6) conditional computational-complexity barriers; (7) context and computation resource constraints; and (8) error compounding under recursive self-modification. We address counterarguments regarding inference-time search, reinforcement learning with self-play, tool-augmented systems, and multi-agent architectures, arguing that each either falls within the proof's scope or introduces external information that should be treated as human influence under the definitions below. We further provide a control theory perspective and empirical corroboration from model-collapse, self-verification, and code-maintenance benchmarks. The current Lean formalization is a work in progress: several bridge assumptions and theorem obligations remain open, so the conclusion should be read as a conditional proof program rather than a completed machine-checked theorem.
 \end{abstract}
 
 \tableofcontents
@@ -52,6 +52,16 @@ We prove that large language models (LLMs) based on stochastic next-token predic
 
 We begin by precisely delineating what this proof does and does not claim.
 
+\begin{remark}[Formalization Status]
+This manuscript is accompanied by a Lean~4 formalization skeleton. The Lean project currently typechecks, but it is not yet a completed proof: several central results are represented by proof obligations, bridge axioms, or placeholders. The claims below should therefore be read in three categories:
+\begin{enumerate}[nosep]
+    \item \emph{Formalized components}, such as selected computability facts imported from Mathlib;
+    \item \emph{Conditional theorem targets}, whose conclusions depend on assumptions that must still be discharged;
+    \item \emph{Empirical or philosophical support}, which may motivate the theorem targets but does not substitute for formal proof.
+\end{enumerate}
+The verification plan for closing these gaps is maintained separately in \texttt{docs/verification\_plan.md}.
+\end{remark}
+
 \begin{remark}[Scope]
 This proof addresses the following specific question: \emph{Can a system based on autoregressive stochastic language modeling, trained via maximum likelihood estimation (or equivalent objectives), autonomously self-improve to AGI without any form of human influence at any stage of the self-improvement process?}
 
@@ -62,7 +72,7 @@ We do \textbf{not} claim:
     \item That human-guided improvement of LLMs is bounded.
 \end{itemize}
 
-We \textbf{do} claim: within the stochastic autoregressive framework operating autonomously, the mathematical structure of the system provably prevents convergence to AGI. Any system that escapes these bounds does so by incorporating elements that constitute human influence or that depart from the stochastic language modeling paradigm---thereby confirming rather than refuting our thesis.
+We \textbf{do} target the following conditional claim: within the stochastic autoregressive framework operating autonomously, the mathematical structure of the system prevents convergence to AGI once the stated barriers are fully formalized. Any system that escapes these bounds should be analyzed by asking whether it incorporates elements that constitute human influence or departs from the stochastic language modeling paradigm.
 \end{remark}
 
 \subsection{The Large Language Model as a Stochastic System}
@@ -628,9 +638,9 @@ An external corrector (human or human-designed verifier) breaks this cycle becau
 \section{Main Theorem}
 %% ============================================================
 
-\begin{theorem}[Impossibility of Autonomous LLM Self-Improvement to AGI]
+\begin{theorem}[Conditional Impossibility of Autonomous LLM Self-Improvement to AGI]
 \label{thm:main}
-Let $\{p_{\bm{\theta}_k}\}_{k=0}^{\infty}$ be the sequence of models produced by autonomous self-improvement (Definition~\ref{def:selfimprove}). Then $\{p_{\bm{\theta}_k}\}$ cannot converge to AGI (Definition~\ref{def:agi}).
+Let $\{p_{\bm{\theta}_k}\}_{k=0}^{\infty}$ be the sequence of models produced by autonomous self-improvement (Definition~\ref{def:selfimprove}). Assume the eight barriers listed below hold under the formal definitions of the model, training process, and AGI criterion. Then $\{p_{\bm{\theta}_k}\}$ cannot converge to AGI (Definition~\ref{def:agi}) unless the initial model already satisfies the AGI criterion.
 
 \begin{enumerate}
     \item \textbf{Information ceiling} (Theorem~\ref{thm:info_ceiling}): Self-generated data cannot create new information about ground truth. Inference-time search can better utilize existing information but is bounded by the same ceiling. The model's knowledge is capped at what the training data contained.
@@ -650,20 +660,20 @@ Let $\{p_{\bm{\theta}_k}\}_{k=0}^{\infty}$ be the sequence of models produced by
     \item \textbf{Error divergence} (Theorem~\ref{thm:error_compound}): Statistical errors compound through recursive self-training. The correction mechanism (the model) has the same error rate as the system being corrected. An AI-built corrector inherits correlated errors from the same flawed process. Only an external corrector with independent error properties can break the cycle.
 \end{enumerate}
 
-\noindent Therefore:
+\noindent Under these assumptions, the target conclusion is:
 \begin{equation}
 \boxed{\forall\; \bm{\theta}_0 \in \mathbb{R}^p,\;\; \forall\; k \geq 0: \quad \mathcal{S}^k(\bm{\theta}_0) \not\to \bm{\theta}^*_{\mathrm{AGI}}}
 \end{equation}
-within the autonomous stochastic autoregressive framework. \qed
+within the autonomous stochastic autoregressive framework, excluding the degenerate case in which $\bm{\theta}_0$ already has AGI-level information. The remaining work is to discharge the assumptions above in a machine-checkable form.
 \end{theorem}
 
 %% ============================================================
 \section{Discussion}
 %% ============================================================
 
-\subsection{What the Proof Shows}
+\subsection{What the Proof Program Targets}
 
-This proof establishes that a stochastic language model, operating without any form of human influence, cannot self-improve to AGI. The result holds for any model size, any architecture within the autoregressive transformer family, and any training schedule. Scale provides quantitative improvements within a bounded function class but does not alter the qualitative impossibility.
+The proof program targets the following conditional result: if the information ceiling, collapse, verification, fixed-point, complexity, resource, and error-divergence barriers are formalized under the definitions above, then a stochastic language model operating without any form of human influence cannot self-improve to AGI unless it already satisfies the AGI criterion. The intended scope is broad with respect to model size, context length, and compute budget, but those scaling claims remain part of the verification work.
 
 \subsection{What Would Escape These Bounds}
 
@@ -678,11 +688,11 @@ Each of these either introduces human influence or leaves the stochastic paradig
 
 \subsection{The Stochastic Parrot, Formalized}
 
-Our results provide mathematical grounding for the characterization of LLMs as ``stochastic parrots''~\cite{bender2021stochastic}. The model is a conditional probability estimator: $p_{\bm{\theta}}(x_t \mid x_{<t})$. Self-improvement within this framework is self-distillation: the parrot learning to parrot itself. The output may become more fluent, more consistent, more confident---but it cannot become more \emph{correct} about things absent from training, more \emph{creative} beyond recombination of observed patterns, or more \emph{general} than the information-theoretic ceiling permits.
+The proof program aims to provide mathematical grounding for the characterization of LLMs as ``stochastic parrots''~\cite{bender2021stochastic}. The model is a conditional probability estimator: $p_{\bm{\theta}}(x_t \mid x_{<t})$. Self-improvement within this framework is self-distillation: the model learning to reproduce its own distribution. Under the information-ceiling assumptions, the output may become more fluent, more consistent, or more confident without becoming more correct about things absent from training or more general than the information-theoretic ceiling permits.
 
-\subsection{Human Influence Is Provably Necessary}
+\subsection{Human Influence as Theorem Target}
 
-The central conclusion is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a mathematically necessary component of that improvement}. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, the intelligence driving LLM progress originates in human cognition. The singularity scenario~\cite{bostrom2014}---in which this dependency is severed and the AI improves autonomously---requires violations of the data processing inequality, G\"{o}del's incompleteness theorems, and fundamental properties of stochastic optimization. It is not an engineering challenge. It is a mathematical impossibility within the framework.
+The central theorem target is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a necessary component of open-ended improvement} under the autonomous stochastic-language-model framework. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, current LLM progress depends on external structure. The formal task is to show that severing this dependency requires escaping at least one of the assumptions behind the barriers above. Until those assumptions are discharged, this should be read as a conditional impossibility claim rather than a completed theorem.
 
 \subsection{A Control Theory Perspective}
 \label{sec:control}
@@ -793,7 +803,7 @@ Sec.~\ref{sec:control} (Human Influence) & Model improvement across the evaluati
 
 SWE-CI's results reveal a striking asymmetry. \emph{Within} an autonomous run (the CI iteration loop), quality degrades: regressions accumulate, technical debt compounds, and the agent's ability to maintain the codebase deteriorates over successive iterations. \emph{Across} model releases (Claude Sonnet to Claude Opus, GPT-4o to GPT-o3, etc.), performance improves steadily.
 
-This asymmetry is precisely what the theory predicts. Autonomous iteration (no human influence) leads to error divergence (Theorem~\ref{thm:error_compound}) and distributional collapse (Theorem~\ref{thm:collapse}). Inter-release improvement reflects human-driven development: new architectures, curated training data, human-designed reward functions, and engineering effort. The intelligence driving progress across releases originates in human cognition---confirming that human influence is provably necessary (Section~10.4).
+This asymmetry is consistent with what the theory predicts. Autonomous iteration (no human influence) leads to error divergence (Theorem~\ref{thm:error_compound}) and distributional collapse (Theorem~\ref{thm:collapse}). Inter-release improvement reflects human-driven development: new architectures, curated training data, human-designed reward functions, and engineering effort. The intelligence driving progress across releases originates in human cognition, supporting the theorem target in Section~10.4.
 
 The SWE-CI benchmark thus provides large-scale empirical corroboration, across 18~models and 100~tasks, that the theoretical impossibility results established in this paper are not merely mathematical artifacts but observable phenomena in deployed systems~\cite{chen2025sweci,shumailov2024model}.
 
