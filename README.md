@@ -47,25 +47,26 @@ We specifically request:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1 | 2026-03-09 | Initial proof with 6 theorems |
+| v1 | 2026-03-09 | Initial proof draft with 6 theorem targets. |
 | v2 | 2026-03-09 | Added counterargument analysis addressing GPT-4o and Gemini critiques. Added quantum asymmetry argument for Gödel. Added overhead paradox, scaling trap, and training time divergence arguments. Tightened scope and definitions. |
 | v3 | 2026-03-11 | Added control theory perspective, multi-agent correlation argument, white noise non-solution, SWE-CI empirical corroboration section. Added bibliography with 13 references. Added author and date. Updated abstract. |
+| v4 | 2026-06-22 | Reframed the repository as a proof program and formalization work in progress. Added explicit status notes for Lean `sorry`s, axioms, and placeholders. Added `docs/verification_plan.md` with acceptance standards and next steps for verifying or weakening each claim. |
 
 ## LLM Review Log
 
-| Model | Date | Verdict | Key Objection | Status |
-|-------|------|---------|---------------|--------|
-| GPT-4o | 2026-03-09 | Rejected proof | Scope too narrow, Gödel misapplied, AlphaZero counterexample | Addressed in v2 |
-| Gemini | 2026-03-09 | Partially accepted | Gödel applies to humans too, filtering breaks collapse | Addressed in v2 |
-| Claude Opus 4 | 2026-03-09 | Accepted with caveats | Gödel section needed quantum asymmetry, scope needed tightening | Incorporated in v2 |
+| Model | Date | Assessment | Key Objection | Follow-up |
+|-------|------|------------|---------------|-----------|
+| GPT-4o | 2026-03-09 | Raised blocking objections | Scope too narrow, Gödel misapplied, AlphaZero counterexample | Addressed in v2 draft revisions; should be rechecked against the v4 proof-program framing. |
+| Gemini | 2026-03-09 | Mixed assessment | Gödel applies to humans too, filtering breaks collapse | Addressed in v2 draft revisions; quantum asymmetry remains a claim to isolate or weaken under the verification plan. |
+| Claude Opus 4 | 2026-03-09 | No blocking objection recorded, with caveats | Gödel section needed quantum asymmetry, scope needed tightening | Incorporated in v2 draft revisions; caveats remain relevant to formal verification. |
 | | | | *Your model here* | |
 
 ## How to Contribute
 
-1. Feed `papers/llm_self_improvement_proof.pdf` to any LLM.
-2. Ask it to rigorously critique the proof.
-3. Open an issue or PR with the model name, date, verdict, and key objections.
-4. If an objection is novel (not already addressed in the paper), it will be incorporated into the next revision.
+1. Feed `papers/llm_self_improvement_proof.pdf` and, where possible, `docs/verification_plan.md` to any LLM or human reviewer.
+2. Ask it to rigorously critique the proof program: definitions, assumptions, theorem statements, Lean formalization gaps, and empirical claims.
+3. Open an issue or PR with the reviewer name, date, assessment, key objections, and whether each objection targets a theorem, assumption, empirical claim, or framing.
+4. If an objection is novel, propose either a manuscript revision, a Lean proof task, or a verification-plan update.
 
 ## Files
 

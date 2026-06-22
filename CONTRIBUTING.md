@@ -23,11 +23,11 @@ autoregressive framework. Your task:
 3. Open an issue with:
    - **Model name and version** (e.g., GPT-5, Claude Opus 4.5, Gemini 2.5 Ultra)
    - **Date of review**
-   - **Verdict**: Accepted / Rejected / Partially Accepted
-   - **Key objections** (summarized)
+   - **Assessment**: e.g., blocking objection / mixed assessment / no blocking objection found
+   - **Key objections** (summarized and classified as theorem, assumption, empirical, or framing)
    - **Full transcript** (attached or linked)
 
-4. If the objection is novel (not already addressed in the paper), open a PR with suggested revisions to the paper.
+4. If the objection is novel (not already addressed in the paper or verification plan), open a PR with suggested revisions to the manuscript, Lean formalization, or `docs/verification_plan.md`.
 
 ## Submitting a Human Review
 
