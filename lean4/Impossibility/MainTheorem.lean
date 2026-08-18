@@ -51,9 +51,11 @@ structure ImpossibilityBarriers (seq : SelfImprovementSeq) (gt : GroundTruth) wh
 
     ∀ θ_0 ∈ ℝ^p, ∀ k ≥ 0: S^k(θ_0) ↛ θ*_AGI
 
-    Proof: Any ONE of the eight barriers suffices. We use the information
-    ceiling (barrier 1) as the primary argument, with the others providing
-    independent confirmation.
+    Proof strategy: the information ceiling (barrier 1) is the primary
+    argument. The barriers are currently ASSUMPTIONS carried by the
+    `ImpossibilityBarriers` hypothesis, matching the paper's conditional
+    v4 framing — none is yet discharged for the actual self-training
+    dynamics (see docs/verification_plan.md).
 
     1. By info_ceiling, I(p_{θ_k}; p_true) ≤ I(p_{θ_0}; p_true) for all k.
     2. AGI requires I(p_{θ*}; p_true) ≥ I(p_true; p_true) - ε for all ε > 0.

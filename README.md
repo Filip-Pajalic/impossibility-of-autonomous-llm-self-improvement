@@ -51,6 +51,7 @@ We specifically request:
 | v2 | 2026-03-09 | Added counterargument analysis addressing GPT-4o and Gemini critiques. Added quantum asymmetry argument for Gödel. Added overhead paradox, scaling trap, and training time divergence arguments. Tightened scope and definitions. |
 | v3 | 2026-03-11 | Added control theory perspective, multi-agent correlation argument, white noise non-solution, SWE-CI empirical corroboration section. Added bibliography with 13 references. Added author and date. Updated abstract. |
 | v4 | 2026-06-22 | Reframed the repository as a proof program and formalization work in progress. Added explicit status notes for Lean `sorry`s, axioms, and placeholders. Added `docs/verification_plan.md` with acceptance standards and next steps for verifying or weakening each claim. |
+| v5 | 2026-08-18 | Corrected 2026 citation metadata (SWE-CI year; Zenil author and year) and recompiled the PDF. Synced stale Lean comments with the v4 conditional framing. Updated the verification plan with follow-ups from the Claude Fable 5 review ([issue #6](https://github.com/Filip-Pajalic/impossibility-of-autonomous-llm-self-improvement/issues/6)), including the AGI-definition diagonalization argument. |
 
 ## LLM Review Log
 
@@ -60,6 +61,7 @@ We specifically request:
 | Gemini | 2026-03-09 | Mixed assessment | Gödel applies to humans too, filtering breaks collapse | Addressed in v2 draft revisions; quantum asymmetry remains a claim to isolate or weaken under the verification plan. |
 | Claude Opus 4 | 2026-03-09 | No blocking objection recorded, with caveats | Gödel section needed quantum asymmetry, scope needed tightening | Incorporated in v2 draft revisions; caveats remain relevant to formal verification. |
 | Codex / GPT-5 | 2026-06-22 | Rejected as completed proof; partially accepted as proof program | Gödelian self-verification/human asymmetry, AGI-definition nontriviality, stale PDF artifact | Opened [issue #5](https://github.com/Filip-Pajalic/impossibility-of-autonomous-llm-self-improvement/issues/5); incorporated AGI-definition and PDF-sync follow-ups into `docs/verification_plan.md`. |
+| Claude Fable 5 (max effort) | 2026-08-18 | No refutation of the narrow conditional core; blocking objections to formal adequacy of key definitions | AGI Definition 1.7 unsatisfiable by diagonalization (main theorem currently vacuous); mutual-information formalism lacks a defined Bayesian joint; error-divergence universality fails in the data-accumulation regime; "human influence" should be reformulated as "external grounding" | Opened [issue #6](https://github.com/Filip-Pajalic/impossibility-of-autonomous-llm-self-improvement/issues/6); citation fixes, Lean comment sync, and verification-plan updates landed with the v5 revision. |
 | | | | *Your model here* | |
 
 ## How to Contribute

@@ -373,25 +373,21 @@ theorem verification_regress
 -- Asymmetry Note
 -- ═══════════════════════════════════════════════════════════════════
 
-/-! ## Why Gödel Does NOT Apply Symmetrically to Humans
+/-! ## Status of the Human-Asymmetry Discussion
 
-  The quantum asymmetry argument (Section 4.1 of the paper) is NOT
-  formalizable in a proof assistant. It relies on physical claims:
+  The human quantum-asymmetry argument (Section 4.1 of the paper) is
+  NOT formalizable in a proof assistant, and as of the v4 manuscript
+  it is explicitly empirical/philosophical background rather than a
+  premise of the formal proof path.
 
-  1. The human brain is a quantum-biological system.
-  2. Synaptic transmission involves quantum tunneling of Ca²⁺ ions.
-  3. If quantum measurement outcomes influence cognition, the brain
-     has access to genuine ontological randomness.
-  4. A system with non-algorithmic randomness is not a Turing machine.
-  5. Gödel's theorems apply only to formal systems (Turing machines).
-  6. Therefore Gödel does not apply to human brains.
-
-  This asymmetry explains why humans CAN self-improve (they are not
-  bound by incompleteness) while LLMs CANNOT completely self-verify
-  (they are formal systems subject to these limits).
-
-  This argument requires physical ontology, not mathematics, and
-  has no Lean counterpart.
+  The formal path requires only the narrower claim treated above:
+  LLM self-modifications cannot be completely certified by the same
+  computational process that generates them (Rice component proven;
+  Gödel components axiomatized). Whether human cognition is subject
+  to analogous limits is a separate physical/philosophical question,
+  deliberately outside the scope of this formalization, and no claim
+  that humans escape such limits is used as a premise anywhere in
+  this project.
 -/
 
 end Impossibility
