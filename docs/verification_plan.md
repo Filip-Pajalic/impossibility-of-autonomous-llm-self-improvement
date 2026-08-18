@@ -16,6 +16,7 @@ A claim is considered verified only when one of the following is true:
    - Replace abstract fields such as `SeqDist.entropy` and `SeqDist.mi_true` with definitions grounded in existing probability or information-theory libraries where feasible.
    - Define the autonomous loop as a stochastic kernel or Markov process, not only as a sequence of abstract models.
    - Make "human influence" a real predicate over information sources, reward functions, filters, and tools instead of `False`.
+   - Audit the AGI definition for nontriviality: specify `D_f`, resource bounds, and representation assumptions so the target is not impossible for every finite physical system by definition.
 
 2. **Information Ceiling**
    - Formalize the Markov chain assumptions required for the data processing inequality.
@@ -74,6 +75,7 @@ A claim is considered verified only when one of the following is true:
 
 12. **Reproducibility**
     - Add a TeX environment definition or package list.
+    - Regenerate the compiled PDF whenever the manuscript source changes, and verify that the PDF title/abstract match the proof-program status in the source.
     - Add CI jobs for `lake build` and LaTeX compilation.
     - Add a check that fails if `sorry`, placeholder `True`, or project-local proof axioms remain in theorem files unless explicitly allowlisted.
 
