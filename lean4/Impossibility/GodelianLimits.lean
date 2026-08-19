@@ -9,9 +9,13 @@
             program computes a "better" function than another
   ✓ PROVEN: Halting-based undecidability — even "does the program halt on
             input n?" is undecidable (from `ComputablePred.halting_problem`)
-  ⊘ AXIOM: Gödel's First & Second Incompleteness Theorems
-            (FormalizedFormalLogic requires Lean v4.28+; axiomatized here
-            with precise statements matching that project's API)
+  ✓ PROVEN (v6): Gödel I in computability form — a computable, sound
+            proof procedure for an undecidable property is incomplete.
+            This replaces the v5 axiom whose content was `True`.
+  ⊘ AXIOM: Gödel's Second Incompleteness Theorem, over an abstract
+            formal-system interface, with content: the consistency
+            sentence is unprovable (FormalizedFormalLogic requires
+            Lean v4.28+)
   ⊘ AXIOM: LLM-to-Code bridge (modeling assumption: an LLM with finite
             precision is equivalent to a partial recursive function)
 
@@ -199,54 +203,98 @@ theorem halting_re (n : ℕ) :
   and replace these axioms with the actual theorems.
 -/
 
-/-- **Gödel's First Incompleteness Theorem** (axiomatized).
+/-! ## Gödel I, computability form (PROVEN)
 
-    Any consistent formal system capable of expressing arithmetic
-    contains true statements it cannot prove.
+  The paper needs one consequence of the first incompleteness theorem:
+  a system cannot certify every true statement about its own behaviour.
+  That consequence has a computability form which Mathlib already
+  supports, so it does not have to be axiomatized: if a property is
+  undecidable and a computable "proof procedure" is *sound* for it, then
+  the procedure is *incomplete* — some true instance is never certified.
 
-    For LLMs: since an LLM is a formal system (finite-precision
-    deterministic computation), there exist true statements about
-    its behavior that it cannot derive.
+  (v6: replaces two axioms whose content was literally `True`; see issue
+  #6, objection 6.) -/
 
-    FormalizedFormalLogic statement:
-    ```
-    theorem LO.FirstOrder.Arithmetic.incomplete
-      (T : ArithmeticTheory) [T.Δ₁] [𝗥₀ ⪯ T] [T.SoundOnHierarchy 𝚺 1] :
-      Incomplete T
-    ```
-    where `Incomplete T` means `∃ φ, Independent T φ` (neither provable
-    nor refutable). -/
-axiom godel_first_incompleteness :
-  -- For any Turing machine M (and hence any LLM), there exist
-  -- input-output properties that M cannot decide about itself.
-  -- Specifically: properties of the form "M halts on input x and
-  -- produces output y" that are true but not provable within M's
-  -- deductive capacity.
-  ∀ (c : Code), ∃ (n : ℕ), -- there exists an input n such that
-    -- the halting behavior of c on n is not decidable by c itself.
-    -- (This is a simplified consequence; the full theorem is about
-    -- sentences in arithmetic, not specific programs.)
-    True
+/-- **Sound provers are incomplete (PROVEN).**
 
-/-- **Gödel's Second Incompleteness Theorem** (axiomatized).
+    If `P` is undecidable and `Prov` is a computable predicate that only
+    certifies instances of `P`, then some instance of `P` is not
+    certified. -/
+theorem sound_prover_incomplete
+    {α : Type} [Primcodable α]
+    (P Prov : α → Prop)
+    (h_undec : ¬ ComputablePred P)
+    (h_comp : ComputablePred Prov)
+    (h_sound : ∀ a, Prov a → P a) :
+    ∃ a, P a ∧ ¬ Prov a := by
+  by_contra hcon
+  push_neg at hcon
+  exact h_undec (funext (fun a => propext ⟨hcon a, h_sound a⟩) ▸ h_comp)
 
-    A consistent formal system cannot prove its own consistency.
+/-- **Concrete instance (PROVEN).** No computable, sound procedure
+    certifies every program that halts on a given input. Applied to
+    self-improvement: whatever internal check the model runs, if the check
+    never produces false positives then it misses true cases — the model
+    can confirm improvement on tested behaviour while remaining unable to
+    certify all of it. -/
+theorem halting_prover_incomplete (n : ℕ) (Prov : Code → Prop)
+    (h_comp : ComputablePred Prov)
+    (h_sound : ∀ c, Prov c → (Code.eval c n).Dom) :
+    ∃ c, (Code.eval c n).Dom ∧ ¬ Prov c :=
+  sound_prover_incomplete _ Prov (halting_undecidable n) h_comp h_sound
 
-    For LLMs: the model cannot verify that its own computation
-    is consistent (free of contradictions).
+/-! ## Gödel II, as an explicit bridge axiom with content
+
+  The second incompleteness theorem is not available in this toolchain
+  (FormalizedFormalLogic requires Lean v4.28+). It is axiomatized below
+  over an abstract formal-system interface. Unlike the v5 version, the
+  axiom asserts something: that a specific sentence — the system's own
+  consistency statement — is not provable. The strength condition
+  (recursively axiomatized, interprets arithmetic) is itself abstract, so
+  the axiom cannot be applied to a toy system that would refute it. -/
+
+/-- Abstract interface to a formal system: a provability predicate on
+    sentence codes, a negation map, and a distinguished consistency
+    sentence. -/
+structure FormalSystem where
+  /-- Codes of the sentences the system proves. -/
+  Provable : ℕ → Prop
+  /-- Negation on sentence codes. -/
+  neg : ℕ → ℕ
+  /-- Code of the system's own consistency sentence Con(T). -/
+  con : ℕ
+  /-- The system is consistent: it never proves both a sentence and its
+      negation. -/
+  consistent : ∀ φ, ¬ (Provable φ ∧ Provable (neg φ))
+
+/-- The strength condition of the second incompleteness theorem:
+    recursively axiomatized and interpreting enough arithmetic
+    (IΣ₁ in the FormalizedFormalLogic statement). Abstract pending that
+    dependency. -/
+axiom InterpretsArithmetic : FormalSystem → Prop
+
+/-- **Gödel's Second Incompleteness Theorem (bridge axiom).**
+
+    A consistent, sufficiently strong formal system does not prove its own
+    consistency sentence.
 
     FormalizedFormalLogic statement:
     ```
     theorem LO.FirstOrder.Arithmetic.consistent_unprovable
       (T : Theory ℒₒᵣ) [T.Δ₁] [𝗜𝚺₁ ⪯ T] [Consistent T] :
       T ⊬ ↑T.consistent
-    ```
--/
-axiom godel_second_incompleteness :
-  -- No Turing machine can verify its own consistency.
-  -- For LLMs: the model cannot prove that its outputs are
-  -- contradiction-free across all possible inputs.
-  ∀ (c : Code), True
+    ``` -/
+axiom godel_second_incompleteness
+    (T : FormalSystem) (h_strength : InterpretsArithmetic T) :
+    ¬ T.Provable T.con
+
+/-- A model that is a formal system in this sense cannot certify its own
+    consistency, and so cannot certify that a self-modification preserves
+    it. -/
+theorem no_self_consistency_certificate
+    (T : FormalSystem) (h_strength : InterpretsArithmetic T) :
+    ¬ T.Provable T.con :=
+  godel_second_incompleteness T h_strength
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Part V: LLM ↔ Turing Machine Bridge
@@ -351,21 +399,19 @@ theorem godel_verification_failure
 
 /-- **Verification regress (PROVEN).**
 
-    For every level in the verification chain, the property "is this
-    verifier correct?" is itself a non-trivial semantic property of
-    programs, hence undecidable by Rice's theorem.
+    Every verifier in a chain is itself a program, so at every level the
+    question "is this verifier adequate?" is the same non-trivial semantic
+    property, undecidable by Rice's theorem.
 
-    The regress is infinite: no finite chain of verifiers can bootstrap
-    complete self-verification.
-
-    **Status: PROVEN** by induction, applying Rice at each level. -/
+    The statement is *level-uniform*: the obstruction does not depend on
+    which programs the chain contains, which is exactly why constructing
+    one more verifier does not help. It is a single application of Rice
+    quantified over levels, not an induction — the v5 docstring overstated
+    it (issue #6, objection 6). -/
 theorem verification_regress
     (Quality : Set (ℕ →. ℕ))
     (h_nontrivial : (∃ f, Nat.Partrec f ∧ f ∈ Quality) ∧
-                    (∃ g, Nat.Partrec g ∧ g ∉ Quality))
-    -- At each level of the regress, a verifier is itself a program
-    (_verifier_chain : ℕ → Code) :
-    -- No level in the chain can computably verify the next level's quality
+                    (∃ g, Nat.Partrec g ∧ g ∉ Quality)) :
     ∀ (_k : ℕ), ¬ ComputablePred (fun (c : Code) => Code.eval c ∈ Quality) :=
   fun _ => verification_failure_rice Quality h_nontrivial
 

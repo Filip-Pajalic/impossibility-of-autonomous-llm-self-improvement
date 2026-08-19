@@ -1,9 +1,24 @@
 /-
-  Theorems 7.1–7.4: The Context-Computation Paradox
+  Section 8: Resource Bounds on In-Context Self-Modification
+  (formerly "The Context-Computation Paradox")
 
-  Core dependencies: Basic arithmetic, information capacity bounds
-  Mathlib status: All needed arithmetic is available.
-    These are quantitative engineering arguments.
+  SCOPE (v6, issue #6 objection 5): these results bound ONE self-improvement
+  strategy — the model representing and reasoning about its own parameters
+  inside its context window. Definition 1.9's loop does not require that:
+  it updates parameters through the training algorithm A, and gradient
+  descent touches every parameter without any parameter entering the
+  context. These are therefore bounds on in-context self-modification, not
+  on the autonomous loop in general.
+
+  FORMALIZATION STATUS (v6):
+  ✓ PROVEN: the capacity bound, the overhead contradiction, the quadratic
+    attention-cost scaling, and cost-per-unit-improvement divergence
+    (previously `sorry`).
+  ✗ REMOVED: the premise that parameter count must grow with context
+    length. RoPE-style context extension takes a fixed-size model from 8K
+    to 128K+ context with no added position parameters, so the v5 scaling
+    trap was empirically false as stated. What survives is the compute
+    form: attention FLOPs, not parameters, scale with context.
 
   Paper reference: Section 8
 -/
@@ -11,33 +26,30 @@ import Impossibility.Defs
 
 namespace Impossibility
 
-/-! ### Theorem 7.1: Self-Correction Requires Unbounded Resources -/
+/-! ### 7.1 Capacity bound -/
 
-/-- The model's working memory (context window) is orders of magnitude
-    too small to represent its own parameter space.
+/-- The model's context window is orders of magnitude too small to hold a
+    representation of its own parameters.
 
-    p · b / (C · log₂|V|) ≫ 1
-
-    For p = 10^11, b = 16, C = 128000, |V| = 10^5:
-    ratio ≈ 730,000
--/
+    p · b / (C · log₂|V|) ≫ 1. For p = 10^11, b = 16, C = 128000,
+    |V| = 10^5 the ratio is ≈ 7.3 × 10^5. -/
 theorem context_too_small (m : LLModel)
     (bits_per_param : ℕ) (vocab_bits : ℕ)
     (h_ratio : m.num_params * bits_per_param >
                m.context_window * vocab_bits) :
-    m.num_params * bits_per_param > m.context_window * vocab_bits := by
-  exact h_ratio
+    m.num_params * bits_per_param > m.context_window * vocab_bits :=
+  h_ratio
 
-/-! ### Theorem 7.2: The Overhead Paradox -/
+/-- Concrete instance of the capacity gap at 2026 frontier scales:
+    10^11 parameters at 16 bits versus a 128K-token context at ~17 bits
+    per token. -/
+theorem capacity_gap_concrete :
+    (10 ^ 11) * 16 > 128000 * 17 := by norm_num
 
-/-- Even if C is extended to fit the full parameter representation,
-    the overhead of reasoning about it creates an irreducible deficit.
+/-! ### 7.2 Overhead -/
 
-    C = C_state + C_reasoning + C_temp + C_output
-    If C_state = C (full state fills context), then
-    C_reasoning + C_temp + C_output > 0 implies total > C.
-    Contradiction.
--/
+/-- If the parameter state fills the context, no room remains for the
+    reasoning that must operate on it. -/
 theorem overhead_paradox
     (c_total c_state c_reasoning c_temp c_output : ℕ)
     (h_partition : c_total = c_state + c_reasoning + c_temp + c_output)
@@ -46,33 +58,51 @@ theorem overhead_paradox
     c_state + c_reasoning + c_temp + c_output > c_total := by
   omega
 
-/-! ### Theorem 7.3: The Scaling Trap -/
+/-! ### 7.3 Compute scaling (replaces the v5 "scaling trap")
 
-/-- Increasing the context window C does not help because model
-    complexity p grows with C. The ratio p·b/(C·log₂|V|) does not
-    converge to 1; it stays large or grows. -/
-theorem scaling_trap
-    (p : ℕ → ℕ) (C : ℕ → ℕ)
-    (h_p_grows_with_C : ∀ k, p (k + 1) ≥ p k)
-    (h_ratio_bounded_below : ∀ k, p k > C k) :
-    ∀ k, p k > C k := by
-  exact h_ratio_bounded_below
+  The surviving claim is about FLOPs, not parameters. Standard attention
+  costs Θ(C²·d) per forward pass, so extending the context to hold a
+  parameter-sized state makes one self-analysis pass quadratic in the
+  state size. Sub-quadratic attention variants weaken this bound, which
+  is why it is stated for the standard architecture only. -/
 
-/-! ### Theorem 7.4: Training Time Divergence -/
+/-- Attention cost as a function of context length and width. -/
+def attention_cost (C d : ℕ) : ℕ := C * C * d
 
-/-- The cost per self-improvement iteration diverges relative to
-    the improvement gained.
+/-- Doubling the context quadruples the attention cost of a pass. -/
+theorem doubling_context_quadruples_cost (C d : ℕ) :
+    attention_cost (2 * C) d = 4 * attention_cost C d := by
+  unfold attention_cost; ring
 
-    T_train(k) / Δ_k → ∞ as k → ∞
+/-- Attention cost is monotone in context length: buying more context to
+    fit the state never lowers the per-pass cost. -/
+theorem attention_cost_monotone {C C' d : ℕ} (h : C ≤ C') :
+    attention_cost C d ≤ attention_cost C' d := by
+  unfold attention_cost
+  exact Nat.mul_le_mul_right d (Nat.mul_le_mul h h)
 
-    because Δ_k → 0 (SGD fixed point) while T_train(k) ≥ Ω(p·C·L).
--/
+/-! ### 7.4 Cost per unit of improvement -/
+
+/-- **Training-time divergence (PROVEN).**
+
+    If the achievable improvement per iteration vanishes while the cost per
+    iteration stays above a positive floor, the cost per unit of
+    improvement exceeds every bound. -/
 theorem training_time_divergence
     (improvement : ℕ → ℝ) (cost : ℕ → ℝ)
     (h_improvement_vanishes : ∀ ε > 0, ∃ K, ∀ k, k ≥ K → improvement k < ε)
     (h_cost_bounded_below : ∃ c > 0, ∀ k, cost k ≥ c) :
-    -- The ratio cost(k)/improvement(k) is eventually arbitrarily large.
     ∀ M > 0, ∃ K, ∀ k, k ≥ K → improvement k > 0 → cost k / improvement k > M := by
-  sorry
+  obtain ⟨c, hc, hcost⟩ := h_cost_bounded_below
+  intro M hM
+  obtain ⟨K, hK⟩ := h_improvement_vanishes (c / M) (div_pos hc hM)
+  refine ⟨K, ?_⟩
+  intro k hk hpos
+  have h1 : improvement k < c / M := hK k hk
+  have h2 : M * improvement k < c := by
+    have := (lt_div_iff₀ hM).mp h1
+    linarith
+  have h3 : M * improvement k < cost k := lt_of_lt_of_le h2 (hcost k)
+  exact (lt_div_iff₀ hpos).mpr h3
 
 end Impossibility
