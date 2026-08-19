@@ -9,13 +9,13 @@ The Claude Fable 5 review (issue #6) is addressed in this revision. What changed
 - **Blocking item resolved.** The AGI definition is repaired. Proposition 1.10 of the manuscript now *proves* that the unrestricted criterion is unsatisfiable by diagonalization (upgrading the v4 worry to a fact), Definition 1.12 is relativized to a fixed, model-independent task family with resource bounds, and Proposition 1.13 proves the relativized target is occupiable. Remaining: extend nontriviality to infinite families where a lookup table is unavailable.
 - **The conditional core is machine-checked.** `lake build` passes with **no `sorry` anywhere in the project**. `Impossibility/Audit.lean` prints the axiom dependencies: the information ceiling, the accuracy link, the collapse results, the error results, `barriers_hold`, and the main theorem depend only on `propext`, `Classical.choice`, and `Quot.sound` — no project-local axioms, no `sorryAx`.
 - **`barriers_hold` is no longer refutable.** `SelfImprovementSeq` now carries a `SelfDistillationChannel` per step, so the distribution at step k+1 is determined by the one at step k. The barriers are derived from the dynamics rather than asserted.
-- **The Bayesian joint is defined** (Definition 2.1 of the manuscript), the DPI strictness claim is withdrawn, and a Fano-type lemma converts the information ceiling into an accuracy ceiling.
+- **The Bayesian joint is defined** (Definition 2.1) and a Fano-type lemma converts the information ceiling into an accuracy ceiling. **Strictness is restored under the correct criterion**: Lemma 2.3 gives the exact identity `I_k − I_{k+1} = I(Θ; θ_k | θ_{k+1})`, so the decrease is strict exactly when the update is not a sufficient statistic, and Proposition 2.4 shows finite-sample self-distillation meets that condition. Only the v4 criterion ("strict whenever model ≠ truth") is gone.
 - **Support contraction is stated over ε-effective support**, with a total-variation transfer lemma; the softmax objection no longer applies.
-- **Error divergence is demoted to non-improvement** as the universal claim, with divergence confined to the replacement regime and the accumulation regime treated explicitly (both formalized).
-- **The context-window results are rescoped** to in-context self-modification, and the parameter-grows-with-context premise is withdrawn.
-- **"Human influence" is reformulated as "external grounding"**, with human design as the dominant special case; the deduction and embodiment boundary cases are conceded in the manuscript rather than defined away.
+- **Error divergence is retained as the theorem** (it was already conditional in v4) and proved in Lean, with the weaker non-improvement conclusion proved under weaker hypotheses. The accumulation regime is formalized and shown to lie *outside* Definition 1.9: it works by permanently retaining the human corpus, which is grounding re-supplied at every step.
+- **The context-computation results are organized as an exhaustive dichotomy** — blind self-modification is bounded by the fixed-point trap and the information ceiling, directed self-modification by the resource inequalities — and the parameter-grows-with-context premise is withdrawn as empirically false.
+- **External grounding is introduced as the general form of the human-influence claim**, not a replacement for it: every category of Definition 1.7 is a grounding signal, and the two boundary cases usually offered (proof kernel, embodied agent) are human artifacts under item (4) as ordinarily realized. The residual case — non-human-designed sensing apparatus — is outside the paradigm, and is stated as such.
 - **Contentless placeholders are gone.** The two Gödel axioms whose content was `True`, the tautological `data_processing_inequality` axiom, `P_ne_NP : True`, the `True`-valued barrier fields, and the Kolmogorov placeholder that made its own theorem false have all been replaced by proven statements or by named axioms that assert something.
-- **Evidence base extended in both directions** (manuscript Section 12): 23 new verified references, including results in tension with the claims (accumulation, verification-guided training, DGM, SEAL, Absolute Zero, R-Zero, Self-Harness, ProRL, and 2026 self-correction work), plus pre-registered falsification criteria.
+- **Evidence base extended in both directions** (manuscript Section 12): 29 new verified references. Six are new supporting results found for v6 — SlopCodeBench (long-horizon agent degradation, 15 agents), verifier-induced regression, the test-time-RL correct-answer extinction window, self-consistency backfiring on hard problems, the solver–verifier gap model, and information-theoretic limits of safety verification. The rest include results that fall outside the definitions (accumulation, verifier-driven systems) and three in genuine tension (ProRL, the self-correction illusion, synthetic-data scaling), plus pre-registered falsification criteria.
 
 What is still open is listed below, with resolved items marked.
 
@@ -40,8 +40,8 @@ A claim is considered verified only when one of the following is true:
 2. **Information Ceiling**
    - Formalize the Markov chain assumptions required for the data processing inequality. **Partially done (v6):** the chain is specified in the manuscript (Definition 2.1) and the conditional-independence step is stated explicitly; it is not yet constructed as a measure-theoretic object in Lean.
    - ~~Define the Bayesian joint.~~ **Done (v6)** in the manuscript (Definition 2.1). **Still open** in Lean: the joint is described, not constructed.
-   - ~~Drop or prove the strictness claim.~~ **Dropped (v6)**, with the reason recorded in Remark 2.3.
-   - ~~Add a Fano-type link lemma.~~ **Done (v6):** Lemma 2.5 and Corollary 2.6 in the manuscript; `accuracy_ceiling_of_info_ceiling` in Lean.
+   - ~~Drop or prove the strictness claim.~~ **Proved (v6)** under the correct criterion: Lemma 2.3 (information-loss identity) and Proposition 2.4 (finite-sample self-distillation is not sufficient), with `StepLoss.after_lt` in Lean. The v4 criterion is withdrawn; the conclusion is not.
+   - ~~Add a Fano-type link lemma.~~ **Done (v6):** Lemma 2.7 and Corollary 2.8 in the manuscript; `accuracy_ceiling_of_info_ceiling` in Lean.
    - ~~Replace the tautological `data_processing_inequality` axiom.~~ **Done (v6):** it is gone; DPI is carried as the `dpi` field of `TrainingChannel`. **Still open:** derive that field from a measure-theoretic model of sampling and training rather than assuming it.
    - ~~Prove `info_ceiling`.~~ **Done (v6)**, by induction over the channel steps.
 
@@ -67,14 +67,14 @@ A claim is considered verified only when one of the following is true:
    - ~~Prove the recurrence theorem under explicit assumptions.~~ **Done (v6):** `error_nondecreasing`, `error_grows_linearly`, `error_diverges`, all proved.
    - ~~Check whether the recurrence implies divergence or only monotone degradation.~~ **Done (v6):** non-improvement is universal; divergence needs a positive degradation floor.
    - ~~Reconcile with the SGD fixed point.~~ **Done (v6):** `degradation_pos` weakened to `degradation_nonneg`; `stagnation_at_fixed_point` proved; Remark 9.3 states the resolution (stagnation with drift).
-   - ~~Address the data-accumulation regime.~~ **Done (v6):** Section 9.1 of the manuscript, and `AccumulationRegime` / `accumulation_no_divergence` in Lean.
+   - ~~Address the data-accumulation regime.~~ **Done (v6):** Section 9.1 of the manuscript, and `AccumulationRegime` / `accumulation_no_divergence` in Lean. The finding is that the regime is outside Definition 1.9 — it re-supplies the retained human corpus at every step — so it violates the theorem's hypotheses rather than refuting it.
    - **Still open:** characterize precisely how much memorized training data must survive in `D_k^self` before the loop counts as accumulation rather than replacement.
 
 7. **Context and Training-Time Claims**
-   - ~~Restate the context-window theorems as bounds on in-context self-modification.~~ **Done (v6):** the section is retitled and opens with a scope remark.
+   - ~~Clarify what the context-window theorems bound.~~ **Done (v6):** the section opens with the blind/directed dichotomy (Remark 8.1), so the bounds close one horn while the fixed-point trap and information ceiling close the other.
    - ~~Drop the parameter-grows-with-context premise.~~ **Done (v6):** withdrawn in Remark 8.5; the surviving claim is the compute form (quadratic attention), stated as architecture-specific.
    - ~~Prove the cost-per-improvement divergence.~~ **Done (v6):** `training_time_divergence` is proved (it was `sorry` in v5).
-   - **Still open:** the section is a cost argument, not an impossibility result, and should probably be demoted to an appendix.
+   - **Still open:** formalize the exhaustiveness of the blind/directed dichotomy rather than arguing it in prose.
 
 ## Priority 3: Claims to Weaken or Isolate
 
@@ -100,8 +100,8 @@ A claim is considered verified only when one of the following is true:
 11. **Evidence Audit**
     - ~~Verify every bibliography entry, arXiv ID, DOI, venue, and year.~~ **Done for the v6 additions:** all 23 new entries were checked against arXiv listings (title, author list, submission date, venue) before citation. **Still open:** re-verify the pre-v5 entries on the same standard.
     - ~~Classify evidence.~~ **Done (v6):** Section 12 classifies each result as theoretical, benchmark, or mechanistic, and time-indexes it by architecture generation.
-    - ~~Do not use empirical evidence as a substitute for a theorem.~~ **Done (v6):** Section 12.2 lists results in tension with the claims, 12.3 audits the grounding source of every strong self-improvement system, and 12.5 states pre-registered falsification criteria.
-    - **Still open:** the 2023-era props (self-correction failure, reversal curse, compositional collapse) are attenuated in verifier-trained models; Section 12.4 time-indexes them, but they should eventually be replaced with measurements on current architectures.
+    - ~~Do not use empirical evidence as a substitute for a theorem.~~ **Done (v6):** Section 12.2 separates results that fall outside the definitions from those in genuine tension (12.3), 12.4 audits the grounding source of every strong self-improvement system, and 12.6 states pre-registered falsification criteria.
+    - **Still open:** the 2023-era props (self-correction failure, reversal curse, compositional collapse) are attenuated in verifier-trained models; Section 12.5 time-indexes them, but they should eventually be replaced with measurements on current architectures.
 
 12. **Reproducibility**
     - Add a TeX environment definition or package list.

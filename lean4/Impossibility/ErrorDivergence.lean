@@ -3,18 +3,21 @@
 
   FORMALIZATION STATUS (v6) — this file was restructured in response to
   issue #6, objection 4:
-  ✓ PROVEN: `error_nondecreasing` — the defensible *universal* claim:
-    without an independent corrector the error never improves.
-  ✓ PROVEN: `error_grows_linearly` and `error_diverges` — divergence, but
-    only in the replacement regime and only under an explicit positive
-    lower bound on undetected degradation.
+  ✓ PROVEN: `error_grows_linearly` and `error_diverges` — the paper's
+    divergence conclusion, under its stated hypotheses (positive floor on
+    undetected degradation, vanishing intended improvement). The v4 text
+    was already explicit that the conclusion is conditional on these.
+  ✓ PROVEN: `error_nondecreasing` — the weaker conclusion under the weaker
+    hypothesis Δ_k ≤ δ_k, which is all the main theorem needs.
   ✓ PROVEN: `stagnation_at_fixed_point` — at the SGD fixed point of
     Theorem 5.1 the error is constant. This is why `degradation_pos` was
     weakened to `degradation_nonneg`: the old structure assumed away the
     fixed-point regime, putting Theorems 5.1 and 9.1 in contradiction.
   ✓ PROVEN: `accumulation_no_divergence` — in the data-accumulation regime
-    (Gerstgrasser et al., arXiv:2404.01413) the error is bounded, so
-    divergence is regime-specific rather than universal.
+    (Gerstgrasser et al., arXiv:2404.01413) the error is bounded. That
+    regime permanently retains the human corpus, so it is externally
+    grounded (Definition 1.7(1)) and lies outside Definition 1.9: it
+    violates the hypotheses rather than refuting the theorem.
 
   Paper reference: Section 9
 -/
@@ -158,10 +161,12 @@ end ErrorModel
   Gerstgrasser et al. (arXiv:2404.01413) prove that when synthetic data
   *accumulate* alongside the original data instead of replacing it, the
   test error has a finite upper bound independent of the iteration count.
-  Definition 1.9 does not by itself exclude this regime: a model that
-  memorizes part of its training corpus and samples at low temperature
-  partially recreates accumulation while still only ever "sampling from
-  p_{θ_k}". -/
+  This works by permanently retaining D_train, which is a grounding signal
+  under Definition 1.6 and human influence under Definition 1.7(1), so the
+  regime is outside Definition 1.9 by construction. The open question is
+  quantitative: memorization lets a model regurgitate approximations of
+  D_train into D_k^self, so how much retained corpus, at what fidelity,
+  is needed before the bound kicks in? -/
 
 /-- A self-training process in the accumulation regime: error stays below
     a fixed bound forever. -/
@@ -170,10 +175,11 @@ structure AccumulationRegime where
   bound : ℝ
   bounded : ∀ k, error k ≤ bound
 
-/-- **Divergence is not universal (PROVEN).** In the accumulation regime
-    the error does not exceed every bound, so the divergence conclusion
-    cannot be asserted of every autonomous process — only of the
-    replacement regime with a positive degradation floor. -/
+/-- **The hypotheses are load-bearing (PROVEN).** In the accumulation
+    regime the error does not exceed every bound. Since that regime
+    re-supplies the grounded corpus at every step, it is not a sealed loop;
+    the lemma records that the divergence conclusion is claimed only where
+    its hypotheses hold, which is what the v4 text already said. -/
 theorem accumulation_no_divergence (ar : AccumulationRegime) :
     ¬ (∀ M : ℝ, ∃ K, ∀ k, k ≥ K → ar.error k > M) := by
   intro h

@@ -130,8 +130,9 @@ theorem impossibility_of_autonomous_agi'
     filters, verifiers, tools, and curricula are the dominant special case;
     an environment sampled from reality is another.
   * A step that is not a `SelfDistillationChannel` — for instance training
-    on accumulated rather than replaced data — escapes the collapse fields
-    (see `AccumulationRegime` in `ErrorDivergence.lean`).
+    on data accumulated alongside the retained human corpus — escapes the
+    collapse fields, but only by re-supplying a grounded signal at every
+    step (see `AccumulationRegime` in `ErrorDivergence.lean`).
   * A model whose initial information already meets the target escapes by
     `h_not_already_agi`.
 

@@ -27,6 +27,7 @@ namespace Impossibility
 #print axioms barriers_hold
 #print axioms info_ceiling
 #print axioms accuracy_ceiling_of_info_ceiling
+#print axioms StepLoss.after_lt
 #print axioms entropy_contraction
 #print axioms eff_support_contraction
 #print axioms gain_requires_grounded_signal

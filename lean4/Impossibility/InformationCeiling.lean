@@ -11,6 +11,9 @@
             converts an information ceiling into an *accuracy* ceiling,
             which is what the AGI criterion actually talks about
             (issue #6, objection 2).
+  ✓ PROVEN: `StepLoss.after_lt` — strict decrease holds exactly when the
+            step fails to be a sufficient statistic, which is the correct
+            criterion (the v4 criterion, "model ≠ truth", does not imply it).
   ⊘ ASSUMED: the data processing inequality itself, carried as the `dpi`
             field of `TrainingChannel`. It is no longer a free-floating
             axiom whose hypothesis was its own conclusion.
@@ -106,12 +109,60 @@ theorem agi_accuracy_unreachable
     acc < 1 - ε :=
   lt_of_le_of_lt (accuracy_ceiling_of_info_ceiling M hM acc mi mi₀ h_fano h_ceiling) h_gap
 
-/-! ### On strictness
+/-! ### Strict decrease (v6)
 
-  The v4 manuscript asserted strict decrease "whenever p_θ ≠ p_true".
-  That does not follow from the data processing inequality: DPI is strict
-  only when the channel destroys information (a bijective
-  reparameterization destroys none). No strictness claim is made here;
-  the conditional core only needs the non-strict ceiling. -/
+  The v4 manuscript attached strictness to the wrong condition ("strict
+  whenever p_θ ≠ p_true"), which does not follow: a bijective
+  reparameterization differs from ground truth and destroys nothing. The
+  correct condition is exact. For the Markov chain Θ → θ_k → θ_{k+1},
+
+    I(Θ; θ_k) − I(Θ; θ_{k+1}) = I(Θ; θ_k | θ_{k+1}),
+
+  so the decrease is strict iff θ_{k+1} fails to be a sufficient statistic
+  for Θ relative to θ_k. Proposition 2.4 of the paper shows finite-sample
+  self-distillation meets that condition: sampling misses the tail below
+  1/N with probability bounded below, so the update cannot separate
+  hypotheses that differ only there.
+
+  We record the identity as a structure (the conditional information is a
+  real number here, as everywhere in this development) and derive both the
+  non-strict and strict conclusions from it. -/
+
+/-- One step of the loop, carrying the exact information-loss decomposition
+    `after = before − residual`, where the residual is the conditional
+    information `I(Θ; θ_k | θ_{k+1})` that the update discards. -/
+structure StepLoss where
+  /-- I(Θ; θ_k) -/
+  before : ℝ
+  /-- I(Θ; θ_{k+1}) -/
+  after : ℝ
+  /-- I(Θ; θ_k | θ_{k+1}) -/
+  residual : ℝ
+  /-- Chain-rule identity for the Markov chain Θ → θ_k → θ_{k+1}. -/
+  identity : after = before - residual
+  /-- Conditional mutual information is non-negative. -/
+  residual_nonneg : 0 ≤ residual
+
+namespace StepLoss
+
+/-- The non-strict ceiling, recovered from the identity. -/
+theorem after_le (s : StepLoss) : s.after ≤ s.before := by
+  rw [s.identity]
+  linarith [s.residual_nonneg]
+
+/-- **Strict decrease (PROVEN) exactly when the step is not sufficient.**
+    `residual > 0` says the old model retained information about ground
+    truth that the new one lost. -/
+theorem after_lt (s : StepLoss) (h : 0 < s.residual) : s.after < s.before := by
+  rw [s.identity]
+  linarith
+
+/-- Conversely, no loss means no strict decrease: the step was sufficient. -/
+theorem sufficient_iff (s : StepLoss) : s.after = s.before ↔ s.residual = 0 := by
+  constructor
+  · intro h; rw [s.identity] at h; linarith
+  · intro h; rw [s.identity, h]; ring
+
+end StepLoss
 
 end Impossibility

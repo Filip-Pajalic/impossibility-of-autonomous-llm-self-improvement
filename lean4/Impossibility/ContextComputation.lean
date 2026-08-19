@@ -1,14 +1,15 @@
 /-
-  Section 8: Resource Bounds on In-Context Self-Modification
-  (formerly "The Context-Computation Paradox")
+  Section 8: The Context-Computation Paradox
+  (bounds on directed self-modification)
 
-  SCOPE (v6, issue #6 objection 5): these results bound ONE self-improvement
-  strategy — the model representing and reasoning about its own parameters
-  inside its context window. Definition 1.9's loop does not require that:
-  it updates parameters through the training algorithm A, and gradient
-  descent touches every parameter without any parameter entering the
-  context. These are therefore bounds on in-context self-modification, not
-  on the autonomous loop in general.
+  SCOPE (v6): these results close the *directed* horn of an exhaustive
+  dichotomy. A self-modifying system either changes itself blindly — no
+  diagnosis, no parameter in context, caught by the SGD fixed point
+  (Theorem 5.1) and the information ceiling — or it changes itself in a
+  directed way, which requires representing and reasoning about its own
+  state, and is caught by the resource bounds here. The objection that
+  "gradient descent needs no parameters in the context window" lands in
+  the first horn, which the other barriers already cover.
 
   FORMALIZATION STATUS (v6):
   ✓ PROVEN: the capacity bound, the overhead contradiction, the quadratic

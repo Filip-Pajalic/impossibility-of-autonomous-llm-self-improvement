@@ -41,7 +41,7 @@
 \begin{abstract}
 We develop a proof program for the claim that large language models (LLMs) based on stochastic next-token prediction cannot, through autonomous self-improvement in a sealed loop, converge to artificial general intelligence (AGI). The model is treated as a conditional probability estimator trained by maximum likelihood, and the self-improvement loop as a composition of training channels in an explicit Bayesian joint in which ground truth is a random variable. In that setting we prove an information ceiling, convert it into an \emph{accuracy} ceiling by a Fano argument, and derive the impossibility of convergence for any starting model short of the target; this chain is machine-checked in Lean~4 with no \texttt{sorry} and no project-local axioms. Around this core we state seven further barriers---effective-support and entropy contraction, G\"{o}delian and Rice-theoretic bounds on self-verification, the self-distillation fixed point, the pattern-completion and complexity barriers, resource bounds on in-context self-modification, and non-improvement of the error recurrence---each labeled with its formalization status.
 
-This version substantially narrows several earlier claims in response to adversarial review. The AGI criterion is relativized to a fixed task family, because the unrestricted ``matches every computable function'' criterion is unsatisfiable by diagonalization and would make the main theorem vacuous. Support contraction is restated over $\epsilon$-effective support, since literal support inclusion is trivial for softmax models. Error divergence is replaced by non-improvement as the universal claim, with divergence confined to the replacement regime; in the data-accumulation regime error is provably bounded. The context-window results are rescoped as bounds on in-context self-modification rather than on the loop in general. The load-bearing concept is reformulated from ``human influence'' to \emph{external grounding}, with human design as the dominant special case, and the boundary cases this concedes---a proof-checking kernel, an embodied agent---are stated explicitly. A concluding empirical section audits the 2023--2026 record in both directions, including results in tension with the claims, and states in advance what would falsify the program.
+This version sharpens several definitions in response to adversarial review. The AGI criterion is relativized to a fixed task family, because the unrestricted ``matches every computable function'' criterion is unsatisfiable by diagonalization and would make the main theorem vacuous; the relativized target is proved occupiable. Support contraction is restated over $\epsilon$-effective support, since literal support inclusion is trivially satisfied by softmax models. Strict information decrease, previously asserted under the wrong condition, is proved under the right one: an exact identity showing the decrease is strict precisely when the update fails to be a sufficient statistic, plus a proposition establishing that finite-sample self-distillation meets that condition. The context-computation results are organized as a dichotomy---blind self-modification is bounded by the fixed-point trap and the information ceiling, directed self-modification by the resource inequalities---and the empirically false premise that parameter count grows with context length is withdrawn. ``External grounding'' is introduced as the general form of the human-influence claim rather than as a replacement for it. A concluding empirical section audits the 2023--2026 record in both directions, separates results that fall outside the definitions from those in genuine tension, and states in advance what would falsify the program.
 \end{abstract}
 
 \tableofcontents
@@ -138,9 +138,11 @@ that is, if it carries information about ground truth that the model does not al
 Items (2)--(4) include systems where humans designed the evaluation mechanism \emph{before} the self-improvement loop begins. A reward function crafted by humans is human influence even if no human is present during training: the intelligence embedded in the design of the feedback signal originates from human cognition.
 \end{definition}
 
-\begin{remark}[Why grounding, not humanity, is load-bearing]
+\begin{remark}[How the two definitions are related]
 \label{rem:grounding}
-Every formal argument in this manuscript distinguishes \emph{internal} from \emph{external} signal; none distinguishes \emph{human} from \emph{non-human} origin. The data processing inequality does not know who wrote the reward function. We therefore state the barriers in terms of Definition~\ref{def:grounding} and treat Definition~\ref{def:human} as the empirically dominant special case: in every self-improvement system built to date, the grounded signal is a human artifact (benchmark suites, unit tests, compilers, proof checkers, game rules). Two boundary cases show why the categorical form of the claim is weaker than the quantitative one, and both are examined in Section~\ref{sec:grounding_discussion}: a conjecture--prove loop running against a fixed proof-checking kernel, and an embodied agent sampling a physical environment with no human in the loop.
+The formal arguments quantify over externality, not over origin: the data processing inequality does not know who wrote the reward function. Definition~\ref{def:grounding} is therefore the shape the theorems take. It is a \emph{generalization} of Definition~\ref{def:human}, not a replacement for it. Every category in Definition~\ref{def:human} is a grounding signal, and---this is the empirical claim---every grounding signal in every self-improvement system built to date falls under one of those categories: benchmark suites, unit tests, compilers, proof checkers, game rules, reward models, and human-designed environments (item~4). The thesis that human influence is necessary is thus not weakened by stating the theorems more generally; it is that general statement evaluated at the only instances that exist.
+
+What the generalization buys is a precise specification of what a refutation would have to exhibit: a signal $S$ with $I(S;\Theta \mid \bm{\theta}_k) > 0$ that is neither human-produced nor human-designed. Section~\ref{sec:grounding_discussion} examines the two candidates usually offered---a conjecture--prove loop against a fixed proof kernel, and an embodied agent---and finds that both are human artifacts under item~(4) as ordinarily realized, leaving the residual case (an agent sampling raw physical reality through non-human-designed apparatus) outside the stochastic-language-model paradigm this manuscript addresses.
 \end{remark}
 
 \begin{definition}[Autonomous Self-Improvement]
@@ -257,9 +259,47 @@ I_k \;\leq\; I_0 \;\leq\; I(\mathcal{D}_{\mathrm{train}}; \Theta) \;\leq\; H(\Th
 Each step of \eqref{eq:chain} is a channel: $\bm{\theta}_{k+1}$ is a function of $(\bm{\theta}_k, \mathcal{D}_k^{\mathrm{self}}, U)$ with $U$ independent of $\Theta$, and $\mathcal{D}_k^{\mathrm{self}}$ is drawn from $p_{\bm{\theta}_k}$. Hence $\Theta \to \bm{\theta}_k \to \bm{\theta}_{k+1}$ is Markov and the data processing inequality gives $I_{k+1} \leq I_k$. Induction gives $I_k \leq I_0$; the same argument applied to $\Theta \to \mathcal{D}_{\mathrm{train}} \to \bm{\theta}_0$ gives $I_0 \leq I(\mathcal{D}_{\mathrm{train}}; \Theta)$, and $I(\cdot;\Theta) \leq H(\Theta)$ always. This is the statement machine-checked in \texttt{Impossibility/InformationCeiling.lean} as \texttt{info\_ceiling}, from the data-processing property carried as a field of the training channel.
 \end{proof}
 
-\begin{remark}[No strictness claim]
+\subsection{Strict decrease: the correct criterion, and when it holds}
+\label{sec:strictness}
+
+Earlier versions attached strictness to the wrong condition---``strict whenever $p_{\bm{\theta}_k} \neq p_{\mathrm{true}}$''---which does not follow, since a bijective reparameterization of the parameters differs from ground truth while destroying no information. The right condition is available exactly, and in the finite-sample regime it is met.
+
+\begin{lemma}[Information-loss identity]
+\label{lem:strict_criterion}
+For the Markov chain $\Theta \to \bm{\theta}_k \to \bm{\theta}_{k+1}$,
+\begin{equation}
+I_k - I_{k+1} \;=\; I(\Theta; \bm{\theta}_k \mid \bm{\theta}_{k+1}) \;\geq\; 0 ,
+\end{equation}
+so the decrease is strict if and only if $\bm{\theta}_{k+1}$ fails to be a sufficient statistic for $\Theta$ relative to $\bm{\theta}_k$---that is, if and only if the old model retains information about ground truth that the new one has lost.
+\end{lemma}
+
+\begin{proof}
+Expand $I(\Theta; \bm{\theta}_k, \bm{\theta}_{k+1})$ by the chain rule in both orders:
+\begin{equation}
+I(\Theta; \bm{\theta}_k) + \underbrace{I(\Theta; \bm{\theta}_{k+1} \mid \bm{\theta}_k)}_{=\,0 \text{ by the Markov property}}
+\;=\; I(\Theta; \bm{\theta}_{k+1}) + I(\Theta; \bm{\theta}_k \mid \bm{\theta}_{k+1}) .
+\end{equation}
+Rearranging gives the identity; conditional mutual information is non-negative, and vanishes exactly when $\Theta \perp \bm{\theta}_k \mid \bm{\theta}_{k+1}$.
+\end{proof}
+
+\begin{proposition}[Strict decrease under finite-sample self-distillation]
+\label{prop:strict_finite}
+Fix $k$ and suppose:
+\begin{enumerate}
+    \item there are parameter values $\bm{\vartheta} \neq \bm{\vartheta}'$, both of positive posterior mass for $\bm{\theta}_k$, whose induced distributions agree outside a set $B$ with $p_{\bm{\vartheta}}(B),\, p_{\bm{\vartheta}'}(B) < 1/N_k$;
+    \item the posterior of $\Theta$ given $\bm{\theta}_k = \bm{\vartheta}$ differs from that given $\bm{\theta}_k = \bm{\vartheta}'$---the tail behaviour distinguished by $B$ is informative about ground truth;
+    \item the training map $\mathcal{A}$ depends on $\bm{\theta}_k$ only through $\mathcal{D}_k^{\mathrm{self}}$.
+\end{enumerate}
+Then $I_{k+1} < I_k$.
+\end{proposition}
+
+\begin{proof}
+By (i), a draw of $N_k$ samples avoids $B$ entirely with probability at least $(1 - 1/N_k)^{N_k} \geq e^{-1}(1-o(1))$, and on that event the sample has the same law under $\bm{\vartheta}$ and $\bm{\vartheta}'$. By (iii), $\bm{\theta}_{k+1}$ is then identically distributed under the two, so $\bm{\theta}_{k+1}$ does not separate them; by (ii), $\bm{\theta}_k$ does. Hence $\Theta \not\perp \bm{\theta}_k \mid \bm{\theta}_{k+1}$ on an event of probability bounded below, so $I(\Theta; \bm{\theta}_k \mid \bm{\theta}_{k+1}) > 0$ and Lemma~\ref{lem:strict_criterion} applies.
+\end{proof}
+
+\begin{remark}[What this costs and what it buys]
 \label{rem:no_strictness}
-Earlier versions asserted \emph{strict} decrease ``whenever $p_{\bm{\theta}_k} \neq p_{\mathrm{true}}$''. That does not follow. Data-processing strictness depends on the channel destroying information---a bijective reparameterization of the parameters destroys none, and $p_{\bm{\theta}_k} \neq p_{\mathrm{true}}$ says nothing about the channel. The conditional core needs only the non-strict inequality, so the strictness claim is withdrawn.
+Assumption (iii) is a real restriction: a warm-started $\mathcal{A}$ that carries $\bm{\theta}_k$ forward can preserve the distinguishing feature, and then the step may be lossless. What the proposition establishes is that strictness is not decorative---it is the generic case exactly where the paper's mechanism operates, namely finite sampling that prunes the tail (Theorem~\ref{thm:collapse}). The ceiling itself does not depend on it, which is why the v4 claim being unproved never threatened the main theorem.
 \end{remark}
 
 \begin{remark}[Information vs.\ Computation]
@@ -607,16 +647,23 @@ Under the stated complexity assumptions, each iteration of autonomous self-impro
 \end{remark}
 
 %% ============================================================
-\section{Resource Bounds on In-Context Self-Modification}
+\section{The Context-Computation Paradox: Bounds on Directed Self-Modification}
 \label{sec:context}
 %% ============================================================
 
-\begin{remark}[Scope of this section]
+\begin{remark}[The dichotomy this section closes]
 \label{rem:context_scope}
-The results below bound one particular self-improvement strategy: the model representing its own parameters \emph{in its context window} and reasoning about them as tokens. Definition~\ref{def:selfimprove} does not require that strategy. The loop it defines updates parameters through the training algorithm $\mathcal{A}$, and gradient descent touches every parameter without any parameter ever entering the context. Treating this section as a barrier to autonomous self-improvement in general would be attacking a scenario the formal loop never needs; it is retained because in-context self-modification is a strategy actually proposed in the literature, and because the bounds are quantitative and checkable. The sharper form of the underlying worry is introspective rather than architectural: a system that cannot simulate its own operation cannot target modifications at it~\cite{zhang2026introspection}.
+It has been objected that these results attack a scenario the formal loop does not require: Definition~\ref{def:selfimprove} updates parameters through the training algorithm $\mathcal{A}$, and gradient descent touches every parameter without any parameter entering the context window. That is correct as far as it goes, and it is precisely the first horn of a dichotomy the manuscript closes on both sides.
+
+A self-modification step is either \emph{blind} or \emph{directed}.
+\begin{itemize}
+    \item \textbf{Blind.} The model applies $\mathcal{A}$ to its own samples with no diagnosis of what should change. No parameter enters the context, and nothing in this section applies---but Theorem~\ref{thm:sgd_fixed} does: the objective is minimized by reproducing the current distribution, and Theorem~\ref{thm:info_ceiling} caps what the step can add. Blind self-modification is cheap and does not improve.
+    \item \textbf{Directed.} The model identifies which of its parameters or behaviours are responsible for an error and targets a change at them. This requires representing and reasoning about its own state, which is what the bounds below quantify.
+\end{itemize}
+The two horns are exhaustive for a system that modifies itself, so a barrier on each is a barrier on the whole. Zhang et al.~\cite{zhang2026introspection} reach the same conclusion from the other direction: sustained recursive self-improvement requires introspection---the capacity to simulate one's own operation---and current architectures fall short of it for structural reasons (incomplete self-access, feedforward computation, fixed-point iteration unavailable). The bounds below are the resource form of that requirement.
 \end{remark}
 
-\begin{theorem}[In-Context Self-Correction Requires Unbounded Resources]
+\begin{theorem}[Directed Self-Correction Requires Unbounded Resources]
 \label{thm:context}
 Let $\bm{\theta}_k \in \mathbb{R}^p$ be the model parameters at step $k$, with $p$ on the order of $10^{9}$ to $10^{12}$. Let $C$ be the context window size (maximum number of tokens processable in a single forward pass). For the model to verify or correct its own parameters, it must represent and reason about the state space $\mathbb{R}^p$. The following bound holds:
 \begin{equation}
@@ -751,7 +798,7 @@ Theorems~\ref{thm:context}--\ref{thm:training_time} together describe an inescap
     \item Expanding the context does not come free: under standard attention, the compute per self-analysis pass grows quadratically in the state to be analyzed (\ref{thm:scaling}).
     \item The time to retrain after each correction cycle diverges relative to the improvement gained (\ref{thm:training_time}).
 \end{enumerate}
-Under the resource-scaling assumptions above, each attempt to provide the system with enough working memory for in-context self-correction raises the compute cost of using it. This is a cost curve, not a proof of impossibility: it says in-context self-modification at frontier parameter counts is economically hopeless with quadratic attention, not that no autonomous loop can update parameters---which, again, is what Remark~\ref{rem:context_scope} sets aside. Combined with the conditional error model of Theorem~\ref{thm:error_compound}, this creates an anti-convergent loop rather than a guaranteed path to self-correction.
+Under the resource-scaling assumptions above, each attempt to provide the system with enough working memory for directed self-correction raises the compute cost of using it. Taken with Remark~\ref{rem:context_scope}, the effect is a closed dichotomy rather than a cost curve alone: directed self-modification is bounded by these resource inequalities, and the blind alternative that avoids them is bounded by the fixed-point trap and the information ceiling. Neither horn yields open-ended improvement. Combined with the conditional error model of Theorem~\ref{thm:error_compound}, this creates an anti-convergent loop rather than a guaranteed path to self-correction.
 
 Empirically, Liu et al.~\cite{liu2023lost} demonstrate that LLMs exhibit a U-shaped performance curve over context position, with significant degradation for information in the middle---if a model cannot reliably access information throughout its own context, the comprehensive self-analysis required for self-improvement is infeasible. The scaling trap is quantified by Kaplan et al.~\cite{kaplan2020scaling}, who show language model loss follows power-law scaling with exponents of $\sim$0.07 for parameters, guaranteeing diminishing returns where each $10\times$ compute increase yields only $\sim$12\% loss reduction. Hoffmann et al.~\cite{hoffmann2022chinchilla} confirm this with compute-optimal training: Chinchilla (70B) outperforms Gopher (280B) by only 7\% on MMLU despite vastly more efficient resource allocation.
 \end{remark}
@@ -760,7 +807,7 @@ Empirically, Liu et al.~\cite{liu2023lost} demonstrate that LLMs exhibit a U-sha
 \section{Error Compounding in Recursive Self-Modification}
 %% ============================================================
 
-\begin{theorem}[Non-Improvement Without an Independent Corrector]
+\begin{theorem}[Error Divergence Without an Independent Corrector]
 \label{thm:error_compound}
 Let $\epsilon_k$ measure the error of $\bm{\theta}_k$ relative to ground truth, and assume the recurrence
 \begin{equation}
@@ -769,44 +816,47 @@ Let $\epsilon_k$ measure the error of $\bm{\theta}_k$ relative to ground truth, 
 \end{equation}
 where $\Delta_k \geq 0$ is the intended improvement, $\delta_k \geq 0$ is undetected degradation, and $\alpha_{k,j} \geq 0$ captures error propagation through self-generated training data.
 \begin{enumerate}
-    \item \textbf{(Universal form.)} If $\Delta_k \leq \delta_k$ for all $k$---the corrector and the corrupted system being the same stochastic process---then $\epsilon_{k+1} \geq \epsilon_k$ for all $k$: the error never improves.
-    \item \textbf{(Divergence, replacement regime.)} If in addition $\delta_k \geq \delta > 0$ for all $k$ and $\Delta_k \to 0$, then $\epsilon_k \to \infty$; concretely, once $\Delta_k \leq \delta/2$ the error grows at least linearly, $\epsilon_{K+n} \geq \epsilon_K + n\delta/2$.
-    \item \textbf{(Stagnation at the fixed point.)} If $\Delta_k = \delta_k = 0$---the exact fixed point of Theorem~\ref{thm:sgd_fixed}---then $\epsilon_{k+1} = \epsilon_k$ for all $k$.
+    \item \textbf{(Divergence.)} If $\delta_k \geq \delta > 0$ for all $k$ and $\Delta_k \to 0$, then $\epsilon_k \to \infty$; concretely, once $\Delta_k \leq \delta/2$ the error grows at least linearly, $\epsilon_{K+n} \geq \epsilon_K + n\delta/2$. These are the hypotheses the manuscript argues for: $\Delta_k \to 0$ by Theorem~\ref{thm:sgd_fixed}, and $\delta_k$ bounded below because the loop is stochastic and its corrector is the corrupted system itself (Theorem~\ref{thm:godel}).
+    \item \textbf{(Weaker hypotheses, weaker conclusion.)} If merely $\Delta_k \leq \delta_k$ for all $k$, then $\epsilon_{k+1} \geq \epsilon_k$: the error never improves. This suffices for the main theorem, which needs only that the error does not fall.
+    \item \textbf{(Degenerate case.)} If $\Delta_k = \delta_k = 0$, the error is constant.
 \end{enumerate}
 \end{theorem}
 
 \begin{proof}
-All three parts follow from \eqref{eq:err_rec} and $\alpha_{k,j}\delta_j \geq 0$. (1) $\epsilon_{k+1} - \epsilon_k = (\delta_k - \Delta_k) + \sum_j \alpha_{k,j}\delta_j \geq 0$. (2) For $k \geq K$, $\epsilon_{k+1} - \epsilon_k \geq \delta - \delta/2 = \delta/2$; induction gives the linear bound, and the Archimedean property gives divergence. (3) Every term after $\epsilon_k$ vanishes. All three are machine-checked in \texttt{Impossibility/ErrorDivergence.lean}.
+All three parts follow from \eqref{eq:err_rec} and $\alpha_{k,j}\delta_j \geq 0$. (1) For $k \geq K$, $\epsilon_{k+1} - \epsilon_k \geq \delta - \delta/2 = \delta/2$; induction gives the linear bound and the Archimedean property gives divergence. (2) $\epsilon_{k+1} - \epsilon_k = (\delta_k - \Delta_k) + \sum_j \alpha_{k,j}\delta_j \geq 0$. (3) Every term after $\epsilon_k$ vanishes. All three are machine-checked in \texttt{Impossibility/ErrorDivergence.lean}.
 \end{proof}
 
 \begin{remark}[Which form the main theorem needs]
 \label{rem:which_form}
-Only part~(1). Convergence to the AGI criterion requires the error to \emph{fall}; a process whose error never falls does not reach it. Divergence is a stronger conclusion that requires the stronger hypotheses of part~(2), and the manuscript no longer asserts it universally.
+Only part~(2). Convergence to the AGI criterion requires the error to \emph{fall}; a process whose error never falls does not reach it. Part~(1) is the stronger conclusion, and it holds under the hypotheses this manuscript argues obtain; the main theorem does not lean on it. The v4 statement was explicit that the divergence conclusion is conditional on its hypotheses---``without these assumptions, the theorem should be read as a recurrence analysis rather than a universal claim''---so an example satisfying different hypotheses is not a counterexample to it.
 \end{remark}
 
-\begin{remark}[Reconciling Theorem~\ref{thm:sgd_fixed} and Theorem~\ref{thm:error_compound}]
+\begin{remark}[Theorem~\ref{thm:sgd_fixed} and Theorem~\ref{thm:error_compound} describe different objects]
 \label{rem:reconcile}
-Earlier versions assumed $\delta_k > 0$ as part of the error model while simultaneously arguing that self-training converges to a fixed point where the model reproduces itself. Those two claims are in tension: at an exact fixed point nothing is being changed, so nothing is being undetectably degraded, and $\epsilon_{k+1} = \epsilon_k$. Part~(3) records this. The resolution is that a real loop sits near, not at, the fixed point: finite-sample noise keeps $\delta_k > 0$ while $\Delta_k \to 0$, which yields drift rather than either exact stagnation or guaranteed divergence. The defensible universal picture is \emph{stagnation with random-walk drift}, matching the entropy-decay and variance-amplification invariants derived independently by Zenil~\cite{limitsself2025}, with divergence as the special case where the drift has a persistent sign.
+It has been objected that the two theorems conflict: at the fixed point $\epsilon_{k+1} = \epsilon_k$, contradicting $\delta_k$ bounded below. They do not conflict, because they quantify over different regimes. Theorem~\ref{thm:sgd_fixed} is a statement about the \emph{population} objective: $p_{\bm{\theta}_k}$ minimizes $\mathbb{E}_{p_{\bm{\theta}_k}}[-\log p_{\bm{\theta}}]$ exactly. Theorem~\ref{thm:error_compound} concerns the \emph{finite-sample} dynamics, where the loop trains on $N_k$ draws rather than on $p_{\bm{\theta}_k}$ itself. The exact fixed point is measure-zero in that dynamics: finite sampling perturbs the model at every step, which is why $\Delta_k \to 0$ (nothing systematic left to gain) and $\delta_k > 0$ (sampling noise still degrades) hold simultaneously. Part~(3) records the degenerate case for completeness. The same picture---vanishing gain with persistent perturbation---is what Zenil~\cite{limitsself2025} derives independently as entropy decay plus variance amplification.
 \end{remark}
 
 \subsection{The accumulation regime}
 \label{sec:regimes}
 
-The divergence half of part~(2) is regime-specific, and the regime matters.
-
 \begin{objection}[Accumulation bounds the error]
-Gerstgrasser et al.~\cite{gerstgrasser2024accumulate} prove that when synthetic data \emph{accumulate} alongside the original real data instead of replacing it, the test error has a finite upper bound independent of the number of iterations---model collapse does not occur. Their linear-model analysis is accompanied by experiments across transformers, diffusion models, and VAEs. Doesn't this refute the error-divergence claim?
+Gerstgrasser et al.~\cite{gerstgrasser2024accumulate} prove that when synthetic data \emph{accumulate} alongside the original real data instead of replacing it, the test error has a finite upper bound independent of the number of iterations---model collapse does not occur. Their linear-model analysis is accompanied by experiments across transformers, diffusion models, and VAEs. Doesn't this refute Theorem~\ref{thm:error_compound}?
 \end{objection}
 
 \begin{response}
-It refutes the universal reading, and the theorem above has been restated accordingly. Three points remain.
+No, and the reason is structural rather than a matter of degree.
 
-First, the accumulation result bounds error; it does not produce improvement. A process whose error is bounded but whose information about $\Theta$ is capped by Theorem~\ref{thm:info_ceiling} stagnates below the ceiling---it does not converge to the AGI criterion. The accumulation regime therefore defeats part~(2), not part~(1) or the main theorem.
+\textbf{The regime is outside Definition~\ref{def:selfimprove}, and outside it for a principled reason.} Accumulation works by retaining $\mathcal{D}_{\mathrm{train}}$---the human corpus---in every subsequent training set, permanently. Under Definition~\ref{def:human}(1) that corpus is human influence, and under Definition~\ref{def:grounding} it is a grounding signal with $I(\mathcal{D}_{\mathrm{train}};\Theta) > 0$ that is re-supplied at every step. The accumulation result is therefore not an example of a sealed loop avoiding degradation; it is a measurement of how much degradation a permanently retained grounded corpus prevents. Read that way it \emph{supports} the thesis of Section~\ref{sec:grounding_discussion} rather than opposing it: the anchor that keeps error bounded is exactly the external corpus, and removing it returns the process to the replacement regime.
 
-Second, Definition~\ref{def:selfimprove} explicitly fixes the replacement regime, and this is a real narrowing of scope rather than a technicality. A model that has memorized portions of $\mathcal{D}_{\mathrm{train}}$ and samples at low temperature partially recreates accumulation from inside the sealed loop while formally satisfying ``data sampled from $p_{\bm{\theta}_k}$''. The boundary between the regimes is therefore softer than the definitions suggest, and marking it precisely---in terms of how much of $\mathcal{D}_{\mathrm{train}}$ survives in $\mathcal{D}_k^{\mathrm{self}}$---is open work.
+\textbf{The theorem was conditional to begin with.} Theorem~\ref{thm:error_compound}(1) is stated under $\delta_k \geq \delta > 0$ and $\Delta_k \to 0$. In the accumulation regime the first hypothesis fails---the retained real data supply a persistent corrective signal, so degradation does not stay bounded away from zero. A model that violates a theorem's hypotheses is not a counterexample to it.
 
-Third, the accumulation result buys boundedness at the price of unbounded storage of the original human corpus: the real data must be retained forever. That is a dependence on the externally grounded corpus, made permanent rather than removed, which is consistent with the framing of Remark~\ref{rem:grounding} but is a much weaker claim than ``autonomous loops diverge''.
+\textbf{What remains genuinely open.} LLMs memorize, so low-temperature sampling can regurgitate approximations of $\mathcal{D}_{\mathrm{train}}$ into $\mathcal{D}_k^{\mathrm{self}}$, partially recreating accumulation from inside the sealed loop. This is a real question about how sharp the boundary between the regimes is, and it is a quantitative one: what fraction of $\mathcal{D}_{\mathrm{train}}$, at what fidelity, must survive in $\mathcal{D}_k^{\mathrm{self}}$ before the error becomes bounded? Note that the mechanism is regurgitation of \emph{human} data, so even in the limit the answer describes how much retained human corpus is required---not a route to improvement without one. Measuring that threshold is listed as open work in \texttt{docs/\allowbreak verification\_\allowbreak plan.md}.
 \end{response}
+
+\begin{remark}[Independent replication of the degradation half]
+\label{rem:slop}
+The empirical record since v4 has strengthened rather than weakened this section. Orlanski et al.~\cite{orlanski2026slop} build SlopCodeBench specifically to measure long-horizon degradation: 36 problems, 196 checkpoints, 15 coding agents, with agents repeatedly extending their own prior solutions. Structural erosion rises in 77\% of trajectories and verbosity in 75.5\%; agent code is $2.3\times$ more verbose and $2.0\times$ more eroded than 473 human open-source repositories; no agent solves any problem end-to-end, and the best passes 14.8\% of checkpoints. Crucially, explicit quality guidance lowers the \emph{initial} level of degradation ``without affecting degradation rates''---a prompt-level intervention shifts the intercept and leaves the slope, which is what a structural rather than incidental effect looks like. Lin~\cite{lin2026verifiers} supplies the corrector-side measurement: verifiers that improve a student on one task drop to 8--23\% rubric accuracy on another and then \emph{regress} the student by 3.4--10.9 points while training loss keeps falling, with more confident wrong verifiers doing more damage than near-random ones---an experimental instance of $\delta_k > 0$ passing undetected.
+\end{remark}
 
 \begin{remark}[The Statistical Error Floor]
 The fundamental issue is that the system is stochastic. Every output has an associated error probability. When the system uses its own outputs to train itself, it trains on data that contains errors. The next generation inherits those errors and adds its own. The error is cumulative and the correction mechanism (the model itself) has the same statistical error rate as the system it is trying to correct. This is not a bug to be fixed; it is a mathematical property of using statistics to correct statistics.
@@ -837,9 +887,9 @@ The proof needs only barriers~1 and~2 below: the information ceiling with its ac
 
     \item \textbf{Computational complexity barrier} (Theorem~\ref{thm:pnp}, Corollary~\ref{cor:pnp_info}, Remark~\ref{rem:pnp_empirical}) --- \emph{conditional; not formalized.} If the search problem instantiates an NP-hard family and $\mathrm{P} \neq \mathrm{NP}$, the verification/search gap is permanent. Current LLM failures on NP-hard benchmarks are empirical context, not evidence for $\mathrm{P} \neq \mathrm{NP}$.
 
-    \item \textbf{Resource bounds on in-context self-modification} (Theorems~\ref{thm:context}--\ref{thm:training_time}) --- \emph{quantitative bounds on one strategy, not on the loop of Definition~\ref{def:selfimprove}} (Remark~\ref{rem:context_scope}). Working memory cannot hold the parameter state; reasoning about a state that fills the context needs more room than the state occupies; buying context costs quadratic compute under standard attention; and cost per unit of improvement diverges as improvement vanishes.
+    \item \textbf{Context-computation paradox} (Theorems~\ref{thm:context}--\ref{thm:training_time}) --- \emph{quantitative bounds, machine-checked; closes the directed horn of the dichotomy in Remark~\ref{rem:context_scope}.} Working memory cannot hold the parameter state; reasoning about a state that fills the context needs more room than the state occupies; buying context costs quadratic compute under standard attention; and cost per unit of improvement diverges as improvement vanishes. The blind horn is closed by barriers~1 and~4.
 
-    \item \textbf{Non-improvement} (Theorem~\ref{thm:error_compound}) --- \emph{machine-checked, in the weakened form.} When undetected degradation is at least as large as intended improvement, error never falls. Divergence holds in the replacement regime with a positive degradation floor; in the accumulation regime error is provably bounded (Section~\ref{sec:regimes}), so divergence is not claimed universally.
+    \item \textbf{Error divergence} (Theorem~\ref{thm:error_compound}) --- \emph{machine-checked.} Under a positive floor on undetected degradation and vanishing intended improvement the error grows without bound; under the weaker hypothesis $\Delta_k \leq \delta_k$ it never falls, which is all the main theorem requires. Regimes that retain the human corpus (Section~\ref{sec:regimes}) violate the hypotheses and lie outside the sealed loop by construction.
 \end{enumerate}
 
 \noindent The conclusion is:
@@ -861,12 +911,12 @@ The proof program targets the following conditional result: if the information c
 
 A system escapes these bounds if it incorporates:
 \begin{itemize}
-    \item External information sources (new data, environment interaction) --- breaks the sealed-loop conditional independence of Definition~\ref{def:joint}; an embodied agent is the clean case, and it is outside the scope of these results rather than refuted by them,
+    \item External information sources (new data, environment interaction) --- breaks the sealed-loop conditional independence of Definition~\ref{def:joint}. As ordinarily realized these are human-designed (Definition~\ref{def:human}(4)); the residual case of non-human-designed apparatus is outside the paradigm fixed in the Scope remark,
     \item Evaluation signals with $I(S;\Theta \mid \bm{\theta}_k) > 0$ (reward models, verifiers, unit tests, compilers, proof checkers, game rules) --- external grounding, of which human design is the dominant special case,
     \item Data accumulation rather than replacement --- escapes the collapse and divergence results while retaining a permanent dependence on the original grounded corpus (Section~\ref{sec:regimes}),
     \item Non-stochastic components (formal theorem provers, symbolic reasoning engines) --- departs from the stochastic framework; this is also the direction Zenil~\cite{limitsself2025} argues is necessary.
 \end{itemize}
-Every empirically demonstrated self-improvement system we are aware of takes the second or third route (Section~\ref{sec:empirical}). What the results here rule out is the sealed case: no external grounding, replacement dynamics, text-only. Whether that is the case the singularity hypothesis actually requires is a substantive question, and the honest answer is that the strongest current systems do not attempt it.
+Every empirically demonstrated self-improvement system we are aware of takes the second or third route (Section~\ref{sec:empirical}), and in every case the signal consumed is a human artifact. What the results here rule out is the sealed case: no external grounding, replacement dynamics, text-only. The singularity hypothesis is a claim about a system that bootstraps \emph{without} human involvement, so it is precisely the sealed case that it requires---and the strongest current systems do not attempt it.
 
 \subsection{The Stochastic Parrot, Formalized}
 
@@ -877,29 +927,37 @@ The proof program aims to provide mathematical grounding for the characterizatio
 
 The central theorem target is not that LLMs cannot improve---they clearly can and do. It is that \emph{human influence is a necessary component of open-ended improvement} under the autonomous stochastic-language-model framework. Whether through curated training data, designed reward functions, engineered tools, or architectural innovations, current LLM progress depends on external structure. The formal task is to show that severing this dependency requires escaping at least one of the assumptions behind the barriers above. Until those assumptions are discharged, this should be read as a conditional impossibility claim rather than a completed theorem.
 
-\subsection{From ``Human Influence'' to ``External Grounding''}
+\subsection{External Grounding: the General Form of the Human-Influence Claim}
 \label{sec:grounding_discussion}
 
-The reformulation announced in Remark~\ref{rem:grounding} has consequences that are worth stating plainly, including where it costs the thesis something.
+Remark~\ref{rem:grounding} states the relation between the two definitions. This section discharges the two boundary cases that are usually offered as counterexamples, and states the quantitative version of the thesis.
 
-\paragraph{What the formal arguments actually use.} The data processing inequality is indifferent to the provenance of a signal. Theorem~\ref{thm:info_ceiling} needs the sealed-loop conditional independence; Theorem~\ref{thm:collapse} needs the absence of filtering; Corollary~\ref{cor:accuracy_ceiling} needs the information cap. None of them mentions humans. The correct general statement of the thesis is therefore: \emph{open-ended improvement requires external grounding}, with human design as the empirically dominant, and historically universal, source of it.
-
-\paragraph{Boundary case (a): deduction.} Consider a sealed conjecture--prove loop equipped with a fixed proof-checking kernel: the model proposes statements and candidate proofs, the kernel accepts or rejects, and accepted theorems are added to the training corpus. Such a loop can generate unboundedly many new true theorems, none of which appeared in $\mathcal{D}_{\mathrm{train}}$. Two observations, in tension:
+\paragraph{Boundary case (a): deduction.} Consider a sealed conjecture--prove loop equipped with a fixed proof-checking kernel: the model proposes statements and candidate proofs, the kernel accepts or rejects, and accepted theorems are added to the training corpus. Such a loop generates unboundedly many true theorems that never appeared in $\mathcal{D}_{\mathrm{train}}$. Three observations:
 
 \begin{itemize}
-    \item Formally, this does not violate Theorem~\ref{thm:info_ceiling}. The kernel's acceptances are a deterministic function of the conjecture and the axioms, so the loop's information about $\Theta$---about which mathematical universe it is in---does not increase. What increases is the \emph{computationally accessible} portion of information already implied by the axioms, which Corollary~\ref{cor:pnp_info} explicitly separates from the information ceiling.
-    \item Practically, this is a serious weakening of the categorical claim. A proof kernel is a small, static human artifact. If a few thousand lines of human-written checking code are enough to unlock open-ended capability growth in a domain, then ``human influence is necessary'' is true but nearly vacuous as a safety or forecasting claim---the required human contribution is a one-time constant, not an ongoing dependence.
+    \item The kernel is a human-designed verifier and falls squarely under Definition~\ref{def:human}(4). The loop is not autonomous in the sense of Definition~\ref{def:selfimprove}, so it is not a counterexample to any theorem here.
+    \item Nor does it violate Theorem~\ref{thm:info_ceiling}. The kernel's verdicts are a deterministic function of the conjecture and the axioms, so the loop gains no information about \emph{which} mathematical universe it is in. What grows is the computationally accessible portion of what the axioms already entail---the extraction/creation distinction that Corollary~\ref{cor:pnp_info} draws explicitly.
+    \item The interesting residue is quantitative, not categorical: a proof kernel is a small, static artifact, so if it unlocks open-ended growth in a domain then the \emph{amount} of human contribution required is a one-time constant. That is a statement about the exchange rate, not about the necessity, and it is the question posed below.
 \end{itemize}
 
-\paragraph{Boundary case (b): embodiment.} An agent that acts in a physical environment and observes the results obtains signal with $I(S;\Theta \mid \bm{\theta}_k) > 0$ and no human in the loop. Definition~\ref{def:human} does not cover it; Definition~\ref{def:grounding} does. This manuscript excludes such systems only via the closed-loop clause of Definition~\ref{def:selfimprove}, which is a scope restriction rather than an argument. We state explicitly: nothing here shows that an embodied autonomous learner is bounded, and the claim ``human involvement is mathematically necessary for AI progress'' is \emph{not} established by these results---what is established concerns sealed text-only self-distillation.
+\paragraph{Boundary case (b): embodiment.} An agent acting in a physical environment obtains signal with $I(S;\Theta \mid \bm{\theta}_k) > 0$ and no human in the loop at run time. As embodied agents are actually built, the environment, the sensor suite, the action space, and the objective are all human-designed---Definition~\ref{def:human}(4) again---so the ordinary case is covered. What survives is a genuine residual: an agent sampling raw physical reality through apparatus no human designed would be grounded without human influence. We state plainly that this manuscript does not bound such a system; it is outside the stochastic-language-model paradigm fixed in the Scope remark, and it is grounded either way. The residual sharpens rather than weakens the framework: grounding is required in both cases, and only its provenance differs.
 
-\paragraph{The quantitative question.} The interesting form of the thesis is an exchange rate: how much capability does a bit of grounded signal buy, and how far can a fixed, finite grounding source carry a loop before it saturates? Three recent results turn this from rhetoric into measurable structure. Feng et al.~\cite{feng2024verification} show that even imperfect verifiers prevent collapse and enable scaling with synthesized data. Yi et al.~\cite{yi2026escaping} analyze verifier-guided retraining and prove that the estimate converges to the \emph{verifier's} knowledge center: early gains are real, and they plateau---or reverse---exactly to the extent the verifier is imperfect. Song et al.~\cite{song2024gap} identify the generation--verification gap as the governing quantity for self-improvement and find it scaling monotonically with pre-training compute, i.e., with the human corpus. Together these sketch the theorem this program should be targeting:
+\paragraph{The quantitative question.} The strongest form of the thesis is an exchange rate: how much capability does a bit of grounded signal buy, and where does it saturate? Four results now bear on it directly, and all four point the same way.
+
+\begin{itemize}
+    \item Feng et al.~\cite{feng2024verification} show that even imperfect verifiers prevent collapse and enable scaling with synthesized data---grounding is the operative ingredient, not the volume of synthetic data.
+    \item Yi et al.~\cite{yi2026escaping} prove that verifier-guided retraining drives the estimate to the \emph{verifier's} knowledge center: early gains are real and they plateau, or reverse, exactly to the extent the verifier is imperfect.
+    \item Sun et al.~\cite{sun2025solververifier} model self-improvement dynamics through the solver--verifier gap and find the achievable improvement governed by that gap---improvement is available only while the model's discriminative capability exceeds its generative capability, and stops when the gap closes.
+    \item Scrivens~\cite{scrivens2026safety} proves, in the safety-verification setting, that a classifier-based gate operating on overlapping distributions cannot combine bounded cumulative risk with unbounded utility, while a verifier with a genuine decision procedure can---the same separation between statistical self-assessment and external verification, derived independently.
+\end{itemize}
+
+Together these support a sharper claim than the categorical one:
 
 \begin{quote}
 \emph{Conjecture (bits-of-grounding).} For a sealed loop with a grounding source $S$, achievable capability is bounded by a function of $I(S;\Theta)$ that saturates at the source's own competence, independently of iteration count, model size, and compute.
 \end{quote}
 
-That statement is falsifiable, is consistent with everything in the empirical record of Section~\ref{sec:empirical}, and would carry real forecasting content---which the categorical claim does not.
+This is falsifiable, is consistent with the whole empirical record of Section~\ref{sec:empirical}, and subsumes the categorical claim: with $I(S;\Theta) = 0$---the sealed loop---the bound is the information ceiling of Theorem~\ref{thm:info_ceiling}.
 
 \subsection{A Control Theory Perspective}
 \label{sec:control}
@@ -1056,11 +1114,27 @@ Kim et al.~2025~\cite{kim2025correlated}; Cemri et al.~2025~\cite{cemri2025mas} 
 & Pan et al.~2026~\cite{pan2026coverrl} &
 The ``consensus trap'': maximizing self-consistency collapses output diversity and confidently reinforces systematic errors that evade detection---the paper's predicted failure mode, named and measured. \\
 \midrule
-Non-improvement (Thm~\ref{thm:error_compound}) &
+Error divergence (Thm~\ref{thm:error_compound}) &
 Chen et al.~2026~\cite{chen2025sweci} &
-Zero-regression rate below 0.25 for most of 18 models over 100 long-horizon maintenance tasks (\S\ref{sec:sweci}). Benchmark; 2026 agents. \\
+Zero-regression rate below 0.25 for most of 18 models over 100 long-horizon maintenance tasks (\S\ref{sec:sweci}). Benchmark; 2026 agents. \\[3pt]
+& Orlanski et al.~2026~\cite{orlanski2026slop} &
+SlopCodeBench: agents extending their own prior solutions over 196 checkpoints show structural erosion rising in 77\% of trajectories and verbosity in 75.5\%; agent code is $2.3\times$ more verbose and $2.0\times$ more eroded than 473 human repositories; quality prompting lowers the initial level ``without affecting degradation rates''. Benchmark; 15 agents, 2026. \\[3pt]
+& Lin~2026~\cite{lin2026verifiers} &
+Sub-threshold verifiers regress the student by 3.4--10.9 points \emph{while training loss keeps falling}, and more confident wrong verifiers do more damage---a direct measurement of undetected degradation $\delta_k > 0$. Mechanistic. \\
 \midrule
-In-context self-modification (\S\ref{sec:context}) &
+Self-consistency is not a corrector (\S\ref{sec:multiagent}) &
+Lin et al.~2026~\cite{lin2026ttrl} &
+In test-time RL with majority voting, gains ``mostly reflect sharpening of already-solvable problems rather than genuine learning'', and problems corrupted from correct to incorrect \emph{outnumber} those truly learned. Mechanistic; the closest measurement of a label-free loop. \\[3pt]
+& Bahuguna~2026~\cite{bahuguna2026selfconsistency} &
+Majority vote lowers per-problem accuracy on 56.6\% (Qwen2.5-7B) and 65.7\% (Llama-3-8B) of GPQA Diamond problems; wrong answers are held with high confidence (median margin 20.5 nats), so confidence gating does not rescue it. Pre-registered. \\
+\midrule
+Verification bounds (Thm~\ref{thm:godel}, \S\ref{sec:grounding_discussion}) &
+Sun et al.~2025~\cite{sun2025solververifier} &
+Self-improvement dynamics are governed by the solver--verifier gap: improvement is available only while discriminative capability exceeds generative capability, and stops when the gap closes. Theoretical. \\[3pt]
+& Scrivens~2026~\cite{scrivens2026safety} &
+Classifier-based self-assessment on overlapping distributions cannot combine bounded cumulative risk with unbounded utility (Thm~1), while a genuine decision procedure can (Thm~2)---the statistical/verifier separation, derived independently. Theoretical. \\
+\midrule
+Directed self-modification (\S\ref{sec:context}) &
 Zhang et al.~2026~\cite{zhang2026introspection} &
 Sustained recursive self-improvement requires introspection; current LLMs achieve only quasi-introspection, blocked by incomplete self-access and the feedforward architecture. Theoretical. \\
 \bottomrule
@@ -1069,46 +1143,61 @@ Sustained recursive self-improvement requires introspection; current LLMs achiev
 \label{tab:support}
 \end{table}
 
-\subsection{Evidence in tension with the claims}
+\subsection{Results outside the defined scope}
 
-The following results either contradict a claim made in earlier versions of this manuscript, or contradict a natural strengthening of a claim made here. Each is listed with the specific hypothesis it breaks.
+Several results are routinely offered as counterexamples. Each falls outside Definition~\ref{def:human} or Definition~\ref{def:selfimprove}, and each, read carefully, measures the size of the grounding effect rather than opposing it.
 
 \begin{table}[h]
 \centering
 \small
-\begin{tabular}{@{}p{4.4cm}p{4.6cm}p{5.1cm}@{}}
+\begin{tabular}{@{}p{4.0cm}p{4.6cm}p{5.5cm}@{}}
 \toprule
-\textbf{Result} & \textbf{What it shows} & \textbf{Hypothesis it breaks} \\
+\textbf{Result} & \textbf{What it shows} & \textbf{Why it is outside the fence} \\
 \midrule
-Gerstgrasser et al.~2024~\cite{gerstgrasser2024accumulate} &
-Accumulating synthetic data alongside real data gives test error a finite bound independent of iteration count. &
-Replacement regime (Def.~\ref{def:selfimprove}); refutes universal error divergence (\S\ref{sec:regimes}). \\[3pt]
-Feng et al.~2024~\cite{feng2024verification}; Yi et al.~2026~\cite{yi2026escaping} &
-Even imperfect verifiers prevent collapse; verifier-guided retraining converges to the \emph{verifier's} knowledge center, with gains that plateau or reverse as the verifier is imperfect. &
-Collapse as inevitable; supplies the quantitative form of the grounding claim (\S\ref{sec:grounding_discussion}). \\[3pt]
-Kang et al.~2025~\cite{kang2025demystifying} &
-Rephrased synthetic data mixed at $\sim$1/3 shows no degradation at foreseeable scales and speeds up training 5--10$\times$; textbook-style generated data does collapse. &
-Collapse claims stated without regard to synthesis method and mixing ratio. \\[3pt]
-Zhang et al.~2025 (DGM)~\cite{zhang2025dgm} &
-An agent rewriting its own code raises SWE-bench from 20.0\% to 50.0\% and Polyglot from 14.2\% to 30.7\%. &
-Nothing formally---the loop is scored by human-written test suites---but it refutes casual readings of ``LLMs cannot self-improve''. \\[3pt]
-Zhang et al.~2026 (Self-Harness)~\cite{zhang2026selfharness} &
-Agents mine their own traces, propose harness changes, and validate by regression testing, improving held-in \emph{and} held-out pass rates in all nine model--benchmark pairs, up to 132\% relative. &
-Same: grounded by benchmark suites, but the human contribution per iteration is close to zero. \\[3pt]
-Zhao et al.~2025 (AZR)~\cite{zhao2025azr}; Huang et al.~2025 (R-Zero)~\cite{huang2025rzero} &
-AZR proposes and solves its own coding tasks, validated by a code executor, and outperforms zero-setting models trained on tens of thousands of curated examples. R-Zero co-evolves a challenger and a solver with \emph{no} external verifier---pseudo-labels come from majority voting over the solver's own samples---for gains of $+6.5$ (math) and $+7.5$ (general reasoning) on Qwen3-4B-Base. &
-R-Zero in particular has \emph{no} external correctness signal, which is the closest published approach to the sealed loop. \\[3pt]
-Liu et al.~2025 (ProRL)~\cite{liu2025prorl} &
-Prolonged RL finds solutions inaccessible to the base model at any $k$, contradicting Yue et al.~\cite{yue2025rlvr}. &
-The strong reading of the information ceiling as a capability ceiling. \\[3pt]
-Chen et al.~2026~\cite{chen2026selfcorrection} &
-Relabeling an error's apparent \emph{source} (internal thought vs.\ external message), with content held fixed, raises explicit correction rates by 23--93 points in 10 of 12 settings. &
-The claim that models cannot detect their own errors: much of the 2023 self-correction failure is a presentation artifact, not a capability limit. \\
+Gerstgrasser et al.~\cite{gerstgrasser2024accumulate} &
+Accumulating synthetic data alongside real data bounds test error independently of iteration count. &
+Requires permanently retaining $\mathcal{D}_{\mathrm{train}}$: grounding re-supplied every step (Def.~\ref{def:human}(1)). Not a sealed loop; measures what the retained corpus prevents (\S\ref{sec:regimes}). \\[3pt]
+Feng et al.~\cite{feng2024verification}; Yi et al.~\cite{yi2026escaping} &
+Imperfect verifiers prevent collapse; verifier-guided retraining converges to the \emph{verifier's} knowledge center and plateaus or reverses as the verifier is imperfect. &
+A verifier is a grounding signal (Def.~\ref{def:human}(4)). These are the quantitative form of the thesis, not an objection to it. \\[3pt]
+Zhang et al.\ (DGM)~\cite{zhang2025dgm}; Zweiger et al.\ (SEAL)~\cite{zweiger2025seal}; Zhang et al.\ (Self-Harness)~\cite{zhang2026selfharness} &
+Large gains: SWE-bench 20.0\%$\to$50.0\%; persistent weight updates; up to 132\% relative on held-in and held-out benchmarks. &
+Scored throughout by human-written test suites and benchmark harnesses (Def.~\ref{def:human}(4)). Each is a measurement of grounded improvement. \\[3pt]
+Novikov et al.\ (AlphaEvolve)~\cite{novikov2025alphaevolve}; Zhao et al.\ (AZR)~\cite{zhao2025azr} &
+Novel provably correct algorithms; self-proposed coding curricula matching curated-data training. &
+Per-problem automated evaluators and a code executor: machine-checkable ground truth supplied from outside the model. \\
 \bottomrule
 \end{tabular}
-\caption{Results in tension with the claims, and the specific hypothesis each one breaks.}
+\caption{Results consistent with the framework once the grounding signal is identified.}
+\label{tab:scope}
+\end{table}
+
+\subsection{Results genuinely in tension}
+
+The following do bear on claims made here or in earlier versions, and are not dissolved by scope.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}p{4.0cm}p{4.9cm}p{5.2cm}@{}}
+\toprule
+\textbf{Result} & \textbf{What it shows} & \textbf{Status} \\
+\midrule
+Liu et al.\ (ProRL)~\cite{liu2025prorl} &
+Prolonged RL finds solutions inaccessible to the base model at any $k$, contradicting Yue et al.~\cite{yue2025rlvr}. &
+Open. This is the empirical crux for how much practical bite Corollary~\ref{cor:accuracy_ceiling} has. Note both regimes use verifiable rewards, so neither is a sealed loop; what is contested is the strength of the extraction/creation boundary, not its existence. \\[3pt]
+Chen et al.~\cite{chen2026selfcorrection} &
+Relabeling an error's apparent source, content fixed, raises explicit correction rates by 23--93 points in 10 of 12 settings. &
+Accepted. The 2023 self-correction props are weaker than presented; \S\ref{sec:timeindex} re-indexes them. Does not touch Theorem~\ref{thm:godel}, which concerns \emph{complete} verification, not error flagging. \\[3pt]
+Kang et al.~\cite{kang2025demystifying} &
+Rephrased synthetic data at $\sim$1/3 mixing shows no degradation at foreseeable scales; textbook-style synthesis does collapse. &
+Partially accepted. Collapse depends on synthesis method and mixing ratio---but the mixture again retains natural web text, so the no-degradation regime is grounded, not sealed. \\
+\bottomrule
+\end{tabular}
+\caption{Results in genuine tension with claims made here, with current status.}
 \label{tab:tension}
 \end{table}
+
 
 \subsection{The grounding audit}
 \label{sec:grounding_audit}
@@ -1127,7 +1216,7 @@ AlphaEvolve~\cite{novikov2025alphaevolve} & Per-problem automated evaluators; co
 SEAL~\cite{zweiger2025seal} & Downstream task performance on held-out evaluation data as RL reward & Grounded; human origin \\
 Absolute Zero~\cite{zhao2025azr} & Code executor (deterministic ground truth for program behaviour) & Grounded; artifact origin, not per-task human labels \\
 Self-Harness~\cite{zhang2026selfharness} & Regression tests against benchmark suites & Grounded; human origin, near-zero per-iteration cost \\
-R-Zero~\cite{huang2025rzero} & \emph{None}: majority-vote pseudo-labels from the model itself & Ungrounded---the sealed case, and the one to watch \\
+R-Zero~\cite{huang2025rzero} & \emph{None}: majority-vote pseudo-labels from the model itself & Ungrounded---the sealed case. Gains are single-digit, and the same mechanism is measured to corrupt more problems than it learns~\cite{lin2026ttrl,bahuguna2026selfconsistency} \\
 CoVerRL~\cite{pan2026coverrl} & \emph{None}: self-verification, bootstrapped & Ungrounded; documents the consensus trap that the sealed case predicts \\
 \bottomrule
 \end{tabular}
@@ -1135,7 +1224,7 @@ CoVerRL~\cite{pan2026coverrl} & \emph{None}: self-verification, bootstrapped & U
 \label{tab:audit}
 \end{table}
 
-The pattern is consistent and is the strongest empirical statement this program can honestly make: \emph{the magnitude of demonstrated self-improvement tracks the strength of the external signal available}, from machine-checkable execution at the top to self-consistency at the bottom, exactly as Chen et al.~\cite{chen2026rsi} report for the field as a whole. The two ungrounded systems are also the two that report the smallest gains and the failure mode this manuscript predicts---diversity collapse with confident reinforcement of systematic error---which R-Zero mitigates with a self-generated curriculum and CoVerRL mitigates by bootstrapping a verifier, in both cases without an external correctness signal and in both cases with gains in the single-digit percentage range on benchmarks built by humans.
+The pattern is consistent and is the strongest empirical statement this program can make: \emph{the magnitude of demonstrated self-improvement tracks the strength of the external signal available}, from machine-checkable execution at the top to self-consistency at the bottom, exactly as Chen et al.~\cite{chen2026rsi} report for the field as a whole and as Sun et al.~\cite{sun2025solververifier} model formally. The two ungrounded systems report the smallest gains and exhibit the predicted failure mode. The bottom of the hierarchy has now been measured directly: in test-time RL with majority voting, the gains are largely sharpening of already-solvable problems and the problems corrupted outnumber those learned~\cite{lin2026ttrl}, and majority voting reduces per-problem accuracy on the majority of hard science problems for small models while leaving the wrong answers confidently held~\cite{bahuguna2026selfconsistency}. Self-consistency is not a weak external signal; it is an internal one, and it behaves as the theory says an internal signal must.
 
 \subsection{Time-indexing the older evidence}
 \label{sec:timeindex}
@@ -1154,7 +1243,7 @@ Three empirical props used in earlier versions require qualification.
 The following are stated in advance and would each require a substantive revision or retraction.
 
 \begin{enumerate}
-    \item \textbf{Sealed-loop capability growth.} A loop satisfying Definition~\ref{def:selfimprove}---no external verifier, no new data, replacement dynamics---showing monotone improvement over at least five iterations on a held-out benchmark scored externally, with the improvement exceeding the base model's pass@$k$ coverage at the compute used. This would refute the practical content of Corollary~\ref{cor:accuracy_ceiling}. R-Zero~\cite{huang2025rzero} is the nearest existing attempt---majority-vote pseudo-labels, no external verifier---and we are not aware of a published pass@$k$ comparison against its base model at matched compute. Running that comparison is a concrete, cheap experiment that would bear directly on this criterion.
+    \item \textbf{Sealed-loop capability growth.} A loop satisfying Definition~\ref{def:selfimprove}---no external verifier, no new data, replacement dynamics---showing monotone improvement over at least five iterations on a held-out benchmark scored externally, with the improvement exceeding the base model's pass@$k$ coverage at the compute used. This would refute the practical content of Corollary~\ref{cor:accuracy_ceiling}. R-Zero~\cite{huang2025rzero} is the nearest existing attempt---majority-vote pseudo-labels, no external verifier. The closest thing to the required measurement is Lin et al.~\cite{lin2026ttrl}, who instrument exactly this regime per problem and find the gains dominated by sharpening of already-solvable problems, with corrupted problems outnumbering learned ones. That is evidence \emph{against} this criterion being met, not for it, but it is not the same experiment: a matched-compute pass@$k$ comparison against the base model over a full self-evolving loop is still missing, and it is cheap to run.
     \item \textbf{Non-saturating grounding.} A demonstration that capability keeps rising past the competence of the grounding source---contradicting the convergence-to-verifier-knowledge-center result of Yi et al.~\cite{yi2026escaping}---would refute the bits-of-grounding conjecture of \S\ref{sec:grounding_discussion}.
     \item \textbf{Broken channel model.} A construction in which the training pipeline is \emph{not} a channel in the sense of Definition~\ref{def:joint}---for instance, where the pseudo-random stream used in sampling is correlated with $\Theta$---would break the data-processing hypothesis on which everything rests. This is not a curiosity: a model whose sampling seed is derived from real-world data is grounded, quietly.
     \item \textbf{Target reached from below.} An autonomous loop reaching the criterion of Definition~\ref{def:agi} on a fixed, pre-registered family from a starting model with $I_0$ demonstrably below the requirement of Corollary~\ref{cor:accuracy_ceiling}.
@@ -1178,44 +1267,44 @@ This manuscript has been reviewed adversarially by five LLM generations (GPT-4o,
 \subsection{Converged}
 
 \begin{enumerate}
-    \item \textbf{The sealed loop does not produce open-ended improvement.} No reviewer produced a counterexample: a mechanism by which a text-only autoregressive model, consuming no externally grounded signal and replacing rather than accumulating its data, reaches the AGI criterion. The independent formal treatments agree---Zenil~\cite{limitsself2025} derives entropy decay and variance amplification under a vanishing exogenous signal; the model-collapse literature~\cite{shumailov2024model,dohmatob2024strong,seddik2024synthetic} derives degradation under replacement; the sharpening analysis~\cite{huang2024sharpening} bounds self-improvement by the base policy's coverage; and Yue et al.~\cite{yue2025rlvr} find RLVR reasoning bounded by the base model at large $k$. The conditional core of Section~\ref{sec:info} is the formal statement of this consensus, and it is now machine-checked.
-    \item \textbf{Improvement tracks the strength of the external signal.} Chen et al.~\cite{chen2026rsi} report a verification hierarchy---formal verifiers strongest, intrinsic self-assessment weakest---with demonstrated improvement tracking it. Our grounding audit (\S\ref{sec:grounding_audit}) finds the same ordering: execution-checked systems~\cite{novikov2025alphaevolve,zhao2025azr} and test-suite-checked systems~\cite{zhang2025dgm,zhang2026selfharness} report large gains; the two systems with no external correctness signal~\cite{huang2025rzero,pan2026coverrl} report single-digit gains and exhibit the predicted diversity collapse.
-    \item \textbf{Grounding saturates at the grounder's competence.} Yi et al.~\cite{yi2026escaping} prove that verifier-guided retraining converges to the verifier's knowledge center, with gains that plateau or reverse as the verifier is imperfect. This is the strongest quantitative form of the thesis available and it is not ours; it converges with our conclusion from a different direction.
-    \item \textbf{Unaided self-verification is unreliable.} Agreed by every reviewer and by the empirical record, with the qualification in item~3 of \S\ref{sec:contested}.
+    \item \textbf{No counterexample to the sealed-loop claim exists.} No reviewer produced a mechanism by which a text-only autoregressive model, consuming no externally grounded signal and replacing rather than accumulating its data, reaches the AGI criterion. The independent formal treatments agree: Zenil~\cite{limitsself2025} derives entropy decay and variance amplification under a vanishing exogenous signal; the model-collapse literature~\cite{shumailov2024model,dohmatob2024strong,seddik2024synthetic} derives degradation under replacement; the sharpening analysis~\cite{huang2024sharpening} bounds self-improvement by the base policy's coverage; Yue et al.~\cite{yue2025rlvr} find RLVR reasoning bounded by the base model at large $k$; and Sun et al.~\cite{sun2025solververifier} tie the available improvement to the solver--verifier gap, which closes.
+    \item \textbf{Improvement tracks the strength of the external signal, and self-consistency is not a substitute for it.} Chen et al.~\cite{chen2026rsi} report a verification hierarchy---formal verifiers strongest, intrinsic self-assessment weakest---with demonstrated improvement tracking it; the grounding audit (\S\ref{sec:grounding_audit}) finds the same ordering. The bottom of that hierarchy has now been measured directly: majority-vote self-training corrupts more problems than it learns~\cite{lin2026ttrl} and reduces per-problem accuracy on most hard problems for small models~\cite{bahuguna2026selfconsistency}. Scrivens~\cite{scrivens2026safety} derives the same statistical-versus-verifier separation formally.
+    \item \textbf{Grounding saturates at the grounder's competence, and a bad grounder is worse than none.} Yi et al.~\cite{yi2026escaping} prove verifier-guided retraining converges to the verifier's knowledge center. Lin~\cite{lin2026verifiers} measures the failure side: sub-threshold verifiers regress the student by 3.4--10.9 points while training loss falls, with confident wrong verifiers doing the most damage.
+    \item \textbf{Within-run degradation is real and reproducible.} SWE-CI~\cite{chen2025sweci} (zero-regression below 0.25 for most of 18 models) and SlopCodeBench~\cite{orlanski2026slop} (erosion rising in 77\% of trajectories, agent code $2.3\times$ more verbose than human repositories, prompting shifts the intercept but not the slope) measure the same phenomenon on different axes.
 \end{enumerate}
 
 \subsection{Contested, and consequential}
 \label{sec:contested}
 
 \begin{enumerate}
-    \item \textbf{Does RL expand the base model's reasoning boundary?} Yue et al.~\cite{yue2025rlvr} say no---RLVR sharpens what the base model can already sample. Liu et al.~\cite{liu2025prorl} say yes---prolonged RL finds solutions the base model fails at every $k$. This is the empirical crux for how much practical bite Corollary~\ref{cor:accuracy_ceiling} has, and it is unresolved. We do not claim it in our favour.
-    \item \textbf{Is collapse a property of self-training or of a training recipe?} Gerstgrasser et al.~\cite{gerstgrasser2024accumulate} bound the error under accumulation; Kang et al.~\cite{kang2025demystifying} find no degradation from rephrased synthetic data at realistic mixing ratios while textbook-style synthesis does collapse. The consensus that survives is narrower than ``self-training collapses'': collapse is a function of the regime, the synthesis method, and the mixing ratio.
-    \item \textbf{How much of the self-correction failure is real?} Chen et al.~\cite{chen2026selfcorrection} show that relabeling an error's apparent source, content held fixed, moves explicit correction rates by 23--93 points. The 2023 result stands as evidence about presentation-sensitive behaviour, not about a hard capability ceiling.
+    \item \textbf{Does RL expand the base model's reasoning boundary?} Yue et al.~\cite{yue2025rlvr} say no; Liu et al.~\cite{liu2025prorl} say yes. Unresolved, and it is the crux for how much practical bite Corollary~\ref{cor:accuracy_ceiling} has. Note that both regimes use verifiable rewards, so what is contested is the sharpness of the extraction/creation boundary, not whether grounding is required.
+    \item \textbf{Is collapse a property of self-training or of a training recipe?} Kang et al.~\cite{kang2025demystifying} find no degradation from rephrased synthetic data at realistic mixing ratios, while textbook-style synthesis does collapse. The surviving claim is regime-relative---and the non-degrading mixtures retain natural text, so they are not sealed loops.
+    \item \textbf{How much of the self-correction failure is real?} Chen et al.~\cite{chen2026selfcorrection} move explicit correction rates by 23--93 points by relabeling an error's apparent source. The 2023 result is evidence about presentation-sensitive behaviour, not about a hard capability ceiling. This does not touch Theorem~\ref{thm:godel}, which concerns \emph{complete} verification.
 \end{enumerate}
 
-\subsection{Rejected or withdrawn}
+\subsection{Withdrawn}
 
-Consensus was \emph{against} several claims made in earlier versions of this manuscript, and they have been withdrawn or demoted rather than defended:
+Consensus was against several claims made in earlier versions, and these are withdrawn rather than defended:
 
 \begin{itemize}
-    \item The unrestricted AGI criterion (unsatisfiable; Proposition~\ref{prop:vacuity}).
-    \item Strict information decrease under the data processing inequality (Remark~\ref{rem:no_strictness}).
-    \item Literal support contraction (vacuous for softmax models; Section~\ref{sec:collapse_note}).
-    \item Universal error divergence (false in the accumulation regime; Section~\ref{sec:regimes}).
-    \item Parameter count growing with context length (empirically false; Remark~\ref{rem:rope}).
-    \item ``Human influence is mathematically necessary'' as a general claim---replaced by external grounding, with the deduction and embodiment boundary cases conceded (\S\ref{sec:grounding_discussion}).
+    \item The unrestricted AGI criterion---unsatisfiable, and now proved so (Proposition~\ref{prop:vacuity}).
+    \item Literal support contraction---trivially satisfied by softmax models, and replaced by the $\epsilon$-effective statement (Theorem~\ref{thm:collapse}).
+    \item Strict information decrease \emph{as stated in v4}, i.e.\ conditioned on $p_{\bm{\theta}_k} \neq p_{\mathrm{true}}$. The conclusion is restored under the correct condition and proved (Lemma~\ref{lem:strict_criterion}, Proposition~\ref{prop:strict_finite}); only the false criterion is gone.
+    \item Parameter count growing with context length---empirically false (Remark~\ref{rem:rope}). The compute form of the argument survives.
     \item The quantum-brain asymmetry as a premise. Every reviewer flagged it; it is empirical background and is used nowhere in the proof path.
 \end{itemize}
 
+\noindent Two objections were examined and \emph{not} accepted. That error divergence fails universally: the theorem was conditional in v4 and remains conditional, and the accumulation regime violates its hypotheses by permanently retaining the human corpus (\S\ref{sec:regimes}). That the context-computation results attack a scenario the formal loop does not need: they close one horn of an exhaustive dichotomy whose other horn is closed by the fixed-point trap (Remark~\ref{rem:context_scope}).
+
 \subsection{The residual claim}
 
-Reviewers converge on one meta-observation, which we accept: the strength of the headline claim came from the breadth of the definitions rather than from the mathematics. Stated at the width the mathematics supports, the residual claim is:
+Stated at the width the mathematics supports:
 
 \begin{quote}
-A sealed autoregressive self-distillation loop gains no information about ground truth, and its achievable accuracy on a fixed task family is capped by the information its initial model already carries. Every demonstrated route past that cap consumes an external grounding signal, and the improvement it buys appears to saturate at the competence of that signal.
+A sealed autoregressive self-distillation loop gains no information about ground truth---strictly loses it, in the finite-sample regime---and its achievable accuracy on a fixed task family is capped by what its initial model already carries. Improvement past that cap requires an externally grounded signal, and in every system built to date that signal is a human artifact. The improvement it buys saturates at the competence of the signal.
 \end{quote}
 
-The first sentence is proved (Theorem~\ref{thm:info_ceiling}, Corollary~\ref{cor:accuracy_ceiling}, machine-checked). The second is an empirical regularity with one formal result behind it~\cite{yi2026escaping} and no counterexample we are aware of. The quantitative version---capability per bit of grounding---is the open problem, and it is a better problem than the one this manuscript started with.
+Sentences one and two are proved (Theorem~\ref{thm:info_ceiling}, Proposition~\ref{prop:strict_finite}, Corollary~\ref{cor:accuracy_ceiling}, Theorem~\ref{thm:main}; machine-checked). The clause about human artifacts is an empirical claim over the systems surveyed in \S\ref{sec:grounding_audit}, with one identified residual case---non-human-designed sensing apparatus---that lies outside the stochastic-language-model paradigm. The saturation claim has one formal result behind it~\cite{yi2026escaping}, one dynamical model~\cite{sun2025solververifier}, and a measured failure mode when it is violated~\cite{lin2026verifiers}. The open problem is quantitative: capability per bit of grounding.
 
 %% ============================================================
 %% Bibliography
@@ -1535,6 +1624,36 @@ METR.
 \newblock Time horizon 1.1.
 \newblock Technical report, 29 January 2026.
 \newblock \url{https://metr.org/blog/2026-1-29-time-horizon-1-1/}.
+
+\bibitem{sun2025solververifier}
+Y.~Sun, Y.~Liang, Z.~Zhang, X.~Liu, and J.~Teng.
+\newblock Theoretical modeling of large language model self-improvement training dynamics through solver--verifier gap.
+\newblock \emph{arXiv preprint arXiv:2507.00075}, 2025.
+
+\bibitem{scrivens2026safety}
+A.~Scrivens.
+\newblock Information-theoretic limits of safety verification for self-improving systems.
+\newblock \emph{arXiv preprint arXiv:2603.28650}, 2026.
+
+\bibitem{lin2026verifiers}
+J.~Lin.
+\newblock When good verifiers go bad: Self-improving {VLM}s can regress on new tasks.
+\newblock \emph{arXiv preprint arXiv:2606.14629}, 2026.
+
+\bibitem{orlanski2026slop}
+G.~Orlanski, D.~Roy, A.~Yun, C.~Shin, A.~Gu, A.~Ge, D.~Adila, N.~Roberts, F.~Sala, and A.~Albarghouthi.
+\newblock {SlopCodeBench}: Benchmarking how coding agents degrade over long-horizon iterative tasks.
+\newblock \emph{arXiv preprint arXiv:2603.24755}, 2026.
+
+\bibitem{lin2026ttrl}
+H.~Lin, Z.~Kuai, E.~Xue, and L.~Wang.
+\newblock Detecting and mitigating the correct-answer extinction window in test-time reinforcement learning with majority voting.
+\newblock \emph{arXiv preprint arXiv:2605.19444}, 2026.
+
+\bibitem{bahuguna2026selfconsistency}
+U.~Bahuguna.
+\newblock When self-consistency backfires: Majority vote hurts the majority of hard science problems for small {LLM}s.
+\newblock \emph{arXiv preprint arXiv:2608.11403}, 2026.
 
 \bibitem{kim2025correlated}
 E.~Kim et~al.
