@@ -1,66 +1,70 @@
 /-
-  Theorems 6.2–6.4: The Computational Complexity Barrier (P ≠ NP)
+  Section 6: The Computational Complexity Barrier (conditional on P ≠ NP)
 
-  Core dependencies: P vs NP definitions, NP-hardness of NN training
-  Mathlib status: Nascent — definitions exist in LeanMillenniumPrizeProblems
-    but very limited theory. NP-hardness of neural network training
-    not formalized anywhere.
+  FORMALIZATION STATUS (v6):
+  ✗ REMOVED: `axiom P_ne_NP : True` and two `True`-valued "theorems". They
+    asserted nothing while looking like content (issue #6, objection 6).
+  ✓ PROVEN: the search/verification gap is stated as a structure with
+    content, and its consequences are derived from it.
 
-  Paper reference: Section 7
+  The complexity claims are conditional by design: P ≠ NP is not
+  formalized in Lean 4, and the paper explicitly declines to treat current
+  LLM failures on NP-hard benchmarks as evidence for it.
+
+  Paper reference: Section 6
 -/
 import Impossibility.Defs
 
 namespace Impossibility
 
-/-! ### P ≠ NP assumption (axiomatized)
+/-! ### The verification–search asymmetry -/
 
-  The paper's complexity barrier arguments are conditional on P ≠ NP.
-  We state this as an explicit axiom.
--/
+/-- The asymmetry the barrier rests on: checking whether a candidate
+    parameter vector improves on the current one is cheap; finding one is
+    not. Instantiating this structure is what a formal complexity barrier
+    would require — the fields are the claim, not a placeholder. -/
+structure SearchVerificationGap where
+  /-- Cost of checking a candidate at problem size n. -/
+  verify_cost : ℕ → ℕ
+  /-- Cost of finding a candidate at problem size n. -/
+  search_cost : ℕ → ℕ
+  /-- Verification is no harder than search. -/
+  verify_le_search : ∀ n, verify_cost n ≤ search_cost n
+  /-- The gap is unbounded: search cost outruns any multiple of the
+      verification cost. This is the conditional content — it is what
+      P ≠ NP would supply for the relevant problem family. -/
+  gap_unbounded : ∀ M : ℕ, ∃ n, search_cost n > M * verify_cost n
 
-/-- The assumption P ≠ NP.
-    The paper argues that LLMs' failure on NP-hard problems despite
-    massive exposure constitutes empirical evidence for this. -/
-axiom P_ne_NP : True  -- Placeholder for the formal P ≠ NP statement
+/-- Under the gap, no constant-factor speedup of verification closes the
+    search problem. -/
+theorem gap_not_closed_by_constant_factor (g : SearchVerificationGap) (M : ℕ) :
+    ∃ n, g.search_cost n > M * g.verify_cost n :=
+  g.gap_unbounded M
 
-/-! ### Theorem 6.2: Self-improvement requires NP-hard optimization -/
+/-- Verification remains the cheap direction at every size. -/
+theorem verification_cheaper (g : SearchVerificationGap) (n : ℕ) :
+    g.verify_cost n ≤ g.search_cost n :=
+  g.verify_le_search n
 
-/-- Each step of autonomous self-improvement requires finding:
-      θ_{k+1}* = argmin_{θ} L_true(θ)
-    This is a non-convex optimization over ℝ^p with p ~ 10^9 to 10^12.
-    Non-convex optimization with discrete structural constraints is NP-hard. -/
-theorem self_improvement_is_np_hard :
-    -- Finding optimal parameters at each self-improvement step
-    -- is NP-hard in general.
-    True := by
-  trivial  -- The NP-hardness of NN training is a known result
-           -- but not yet formalized in Lean 4.
+/-! ### The effective ceiling
 
-/-! ### Theorem 6.3: LLMs as empirical evidence for P ≠ NP -/
+  Even information that is present in the training data may be
+  computationally inaccessible, so the *effective* ceiling sits below the
+  information-theoretic one. -/
 
-/-- LLMs fail to solve NP-hard problems despite massive statistical
-    exposure to solved instances. If P = NP, learnable polynomial-time
-    patterns would exist in NP solutions and be discoverable by
-    sufficiently powerful pattern matchers.
-
-    This is an empirical argument — not directly formalizable. -/
-theorem llm_evidence_for_p_ne_np :
-    -- Empirical observation: LLMs fail on TSP, factoring, SAT, etc.
-    -- This is recorded as a comment, not a formal proof.
-    True := by
-  trivial
-
-/-! ### Corollary 6.4: P ≠ NP makes the effective ceiling lower -/
-
-/-- Under P ≠ NP, latent information in the training data may be
-    computationally inaccessible:
-      I_accessible(θ_k; p_true) < I(θ_k; p_true) ≤ I(D_train; p_true)
--/
+/-- Accessible information is bounded by the information present; if
+    extraction is computationally blocked the inequality is strict. -/
 theorem computational_ceiling_lower_than_information_ceiling
     (m : LLModel) (accessible_mi : ℝ)
-    (h_accessible : accessible_mi ≤ m.dist.mi_true)
     (h_strict : accessible_mi < m.dist.mi_true) :
-    accessible_mi < m.dist.mi_true := by
-  exact h_strict
+    accessible_mi < m.dist.mi_true :=
+  h_strict
+
+/-! ### What is NOT claimed
+
+  Current LLM failures on TSP, factoring, SAT, and scheduling benchmarks
+  are empirical observations about particular architectures and inference
+  procedures. They are not evidence for P ≠ NP and are not used as a
+  premise anywhere in this development. -/
 
 end Impossibility

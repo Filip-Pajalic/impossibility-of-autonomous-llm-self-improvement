@@ -1,11 +1,27 @@
 /-
-  Main Theorem (Theorem 9.1):
-  Impossibility of Autonomous LLM Self-Improvement to AGI
+  Main Theorem (Section 10 of the paper):
+  Conditional Impossibility of Autonomous LLM Self-Improvement to AGI
 
-  This file combines all eight independent impossibility results into
-  the main theorem. Each component theorem is referenced with `sorry`
-  stubs — as individual proofs are completed, the `sorry`s here will
-  resolve automatically.
+  FORMALIZATION STATUS (v6):
+  ✓ PROVEN: `impossibility_of_autonomous_agi` — no `sorry`. Given the
+    information ceiling and a starting model short of the target, the
+    sequence cannot converge to AGI.
+  ✓ PROVEN: `barriers_hold` — the barriers collected below now FOLLOW from
+    the loop dynamics in `Defs.lean` rather than being asserted. In v5 the
+    sequence type constrained nothing across steps, so `barriers_hold` was
+    refutable (one could build a sequence whose `mi_true` increases); that
+    is fixed by making each step a self-distillation channel (issue #6,
+    objection 6).
+
+  WHAT IS NOT REPRESENTED HERE. Two of the paper's eight barriers have no
+  field in `ImpossibilityBarriers`, deliberately:
+  * The pattern-completion barrier depends on Kolmogorov complexity, which
+    has no Lean 4 formalization; the placeholder in
+    `PatternCompletionBarrier.lean` is not usable as a hypothesis.
+  * The complexity barrier is conditional on P ≠ NP, which is not
+    formalized either.
+  Carrying them as `True` fields, as v5 did, would assert nothing while
+  looking like content. They are tracked in docs/verification_plan.md.
 
   Paper reference: Section 10
 -/
@@ -21,77 +37,106 @@ import Impossibility.ErrorDivergence
 
 namespace Impossibility
 
-/-! ### The eight barriers, collected -/
+open Nat.Partrec
 
-/-- All eight impossibility barriers hold simultaneously for any
-    autonomous self-improvement sequence. -/
+/-! ### The barriers that the formalization actually carries -/
+
+/-- The barriers that hold for every autonomous self-improvement sequence,
+    each with content and each provable from the loop dynamics. -/
 structure ImpossibilityBarriers (seq : SelfImprovementSeq) (gt : GroundTruth) where
-  /-- 1. Information ceiling: MI with ground truth is non-increasing -/
+  /-- 1. Information ceiling: information about ground truth never rises. -/
   info_ceiling : ∀ k, (seq.model k).dist.mi_true ≤ (seq.model 0).dist.mi_true
-  /-- 2. Distributional collapse: entropy is non-increasing -/
+  /-- 2a. Distributional collapse: entropy is non-increasing. -/
   dist_collapse : ∀ k, (seq.model (k + 1)).dist.entropy ≤ (seq.model k).dist.entropy
-  /-- 3. Gödelian verification: complete self-verification is impossible -/
-  godel_limit : True  -- Placeholder for the Gödelian impossibility
-  /-- 4. SGD fixed point: MI does not increase through self-training -/
+  /-- 2b. Effective support is non-increasing (stated over the ε-effective
+      support; literal support is vacuous for softmax models). -/
+  eff_support_collapse :
+    ∀ k, (seq.model (k + 1)).dist.eff_support ≤ (seq.model k).dist.eff_support
+  /-- 3. Gödelian/Rice verification failure: no computable procedure
+      decides a non-trivial quality property of programs. -/
+  godel_limit : ∀ (Quality : Set (ℕ →. ℕ)),
+    ((∃ f, Nat.Partrec f ∧ f ∈ Quality) ∧ (∃ g, Nat.Partrec g ∧ g ∉ Quality)) →
+    ¬ ComputablePred (fun (c : Code) => Code.eval c ∈ Quality)
+  /-- 4. SGD fixed point: no step increases information about ground truth. -/
   sgd_fixed : ∀ k, (seq.model (k + 1)).dist.mi_true ≤ (seq.model k).dist.mi_true
-  /-- 5. Pattern completion: some computable functions are unreachable -/
-  pattern_barrier : True  -- Placeholder for the pattern completion barrier
-  /-- 6. Complexity barrier: self-improvement requires NP-hard search -/
-  complexity_barrier : True  -- Placeholder; conditional on P ≠ NP
-  /-- 7. Context paradox: working memory is insufficient for self-correction -/
-  context_paradox : (seq.model 0).num_params > (seq.model 0).context_window
-  /-- 8. Error divergence: errors compound without external correction -/
-  error_divergence : True  -- Placeholder for the error divergence result
+  /-- 5. No information gain without grounding: no step is an information
+      gain, because the step is a channel with no grounded signal. -/
+  no_gain : ∀ k, ¬ ((seq.model k).dist.mi_true < (seq.model (k + 1)).dist.mi_true)
+  /-- 6. Autonomy: no step uses human influence. -/
+  no_human_influence : ∀ k, ¬ (seq.step k).HasHumanInfluence
+
+/-! ### The barriers are consequences of the dynamics -/
+
+/-- **The barriers hold for every autonomous sequence (PROVEN).**
+
+    Nothing here is assumed at the sequence level: each field is derived
+    from the channel structure of the loop. -/
+theorem barriers_hold (seq : SelfImprovementSeq) (gt : GroundTruth) :
+    ImpossibilityBarriers seq gt where
+  info_ceiling := info_ceiling seq
+  dist_collapse := entropy_contraction seq
+  eff_support_collapse := eff_support_contraction seq
+  godel_limit := fun Quality h => verification_failure_rice Quality h
+  sgd_fixed := sgd_fixed_point seq
+  no_gain := fun k => by
+    have h := mi_step_le seq k
+    exact not_lt.mpr h
+  no_human_influence := seq.no_human_influence
 
 /-! ### Main Theorem -/
 
-/-- **Main Theorem.** Let {p_{θ_k}} be the sequence of models produced by
-    autonomous self-improvement (Definition 1.5). Then {p_{θ_k}} cannot
-    converge to AGI (Definition 1.6).
+/-- **Main Theorem (PROVEN, conditional on the loop model).**
 
-    ∀ θ_0 ∈ ℝ^p, ∀ k ≥ 0: S^k(θ_0) ↛ θ*_AGI
+    Let {θ_k} be produced by autonomous self-improvement (Definition 1.9).
+    If the initial model's information about ground truth falls short of
+    the target, the sequence does not converge to AGI (Definition 1.12,
+    relativized to the fixed task family).
 
-    Proof: Any ONE of the eight barriers suffices. We use the information
-    ceiling (barrier 1) as the primary argument, with the others providing
-    independent confirmation.
+    1. By `info_ceiling`, I(p_{θ_k}; Θ) ≤ I(p_{θ_0}; Θ) for all k.
+    2. Convergence would force I(p_{θ_k}; Θ) ≥ H(Θ) − ε for every ε > 0.
+    3. Taking ε = (H(Θ) − I(p_{θ_0}; Θ))/2 contradicts (1).
 
-    1. By info_ceiling, I(p_{θ_k}; p_true) ≤ I(p_{θ_0}; p_true) for all k.
-    2. AGI requires I(p_{θ*}; p_true) ≥ I(p_true; p_true) - ε for all ε > 0.
-    3. Unless the initial model already has AGI-level information
-       (I(p_{θ_0}; p_true) ≥ I(p_true; p_true)), convergence is impossible.
-    4. No finite training set D_train satisfies this for ALL computable functions.
-    5. Therefore the sequence cannot converge to AGI.
--/
+    The excluded degenerate case — the initial model already meeting the
+    criterion — is exactly the hypothesis `h_not_already_agi`. -/
 theorem impossibility_of_autonomous_agi
     (seq : SelfImprovementSeq)
     (gt : GroundTruth)
     (barriers : ImpossibilityBarriers seq gt)
-    -- The initial model does not already have AGI-level information
     (h_not_already_agi : (seq.model 0).dist.mi_true < gt.dist.entropy) :
     ¬ converges_to_AGI seq gt := by
-  -- Proof sketch:
-  -- 1. converges_to_AGI requires: ∀ ε > 0, ∃ K, ∀ k ≥ K, mi_true(k) ≥ gt.entropy - ε
-  -- 2. By barriers.info_ceiling: ∀ k, mi_true(k) ≤ mi_true(0) < gt.entropy
-  -- 3. Choose ε = gt.entropy - mi_true(0) > 0
-  -- 4. Then mi_true(k) ≤ mi_true(0) = gt.entropy - ε < gt.entropy - ε + ε
-  -- 5. So mi_true(k) < gt.entropy - ε/2 for any K, contradicting convergence.
-  sorry
+  intro hconv
+  have hε : (0 : ℝ) < (gt.dist.entropy - (seq.model 0).dist.mi_true) / 2 := by
+    linarith
+  obtain ⟨K, hK⟩ := hconv _ hε
+  have h1 := hK K le_rfl hε
+  have h2 := barriers.info_ceiling K
+  linarith
 
-/-- The impossibility barriers can be established for any autonomous
-    self-improvement sequence. -/
-theorem barriers_hold (seq : SelfImprovementSeq) (gt : GroundTruth) :
-    ∃ barriers : ImpossibilityBarriers seq gt, True := by
-  sorry
+/-- The same conclusion without threading the barrier structure: for an
+    autonomous sequence the barriers are automatic. -/
+theorem impossibility_of_autonomous_agi'
+    (seq : SelfImprovementSeq) (gt : GroundTruth)
+    (h_not_already_agi : (seq.model 0).dist.mi_true < gt.dist.entropy) :
+    ¬ converges_to_AGI seq gt :=
+  impossibility_of_autonomous_agi seq gt (barriers_hold seq gt) h_not_already_agi
 
-/-! ### Completeness: what WOULD escape these bounds -/
+/-! ### What WOULD escape these bounds
 
--- A system escapes these bounds by incorporating:
--- • External information sources → violates closed-loop assumption
--- • Human-designed evaluation signals → constitutes human influence
--- • Human-engineered tools/verifiers → constitutes human influence
--- • Non-stochastic components → departs from stochastic framework
---
--- Each of these either introduces human influence or leaves the paradigm.
--- In either case, it is no longer autonomous self-improvement as defined.
+  The escape routes are exactly the hypotheses that fail:
+
+  * A grounded external signal (`ExternalSignal.Grounded`) breaks the `dpi`
+    field: by `gain_requires_grounded_signal`, any mechanism that raises
+    information about ground truth needs one. Human-designed rewards,
+    filters, verifiers, tools, and curricula are the dominant special case;
+    an environment sampled from reality is another.
+  * A step that is not a `SelfDistillationChannel` — for instance training
+    on data accumulated alongside the retained human corpus — escapes the
+    collapse fields, but only by re-supplying a grounded signal at every
+    step (see `AccumulationRegime` in `ErrorDivergence.lean`).
+  * A model whose initial information already meets the target escapes by
+    `h_not_already_agi`.
+
+  Each escape either introduces external grounding or leaves the sealed
+  self-distillation loop. -/
 
 end Impossibility
