@@ -366,6 +366,7 @@ Achieving the criterion of Definition~\ref{def:agi} requires assigning top proba
 \end{corollary}
 
 \begin{remark}[What the softmax objection cost the argument]
+\label{sec:collapse_note}
 The repair is not free. The contraction now depends on the training tolerance $\eta$ and the sample budget $N_k$, both of which are engineering parameters: a loop that samples enough, with a large enough $\eta$-slack, contracts slowly. The claim ``self-training collapses'' is therefore quantitative, not categorical, and the interesting regime is where $N_k$ is small relative to the effective support the target requires.
 \end{remark}
 
@@ -1166,6 +1167,55 @@ What would \emph{not} count: gains from systems whose loop consults human-built 
 Two trend series bear on the manuscript's claims without settling them. ARC-AGI-2~\cite{chollet2025arcagi2}, on which every frontier model scored 0\% at its March 2025 launch, saw a top Kaggle score of 24\% on the private evaluation set within the first competition cycle~\cite{arcprize2025}, with higher verified scores reported for commercial systems. METR's task-length measurements~\cite{kwa2025horizons} put the 50\% time horizon of frontier models at roughly 50 minutes in early 2025 and, in the January 2026 revision of the task suite~\cite{metr2026horizon}, at 320 minutes for the strongest measured model, with doubling times of 131 days when fitted from 2023 and 89 days when fitted from 2024.
 
 Both series measure \emph{across-release} progress, which is human-driven: new architectures, new curated corpora, new human-designed reward schemes. They are therefore consistent with the within-run/across-release asymmetry documented in \S\ref{sec:sweci}, and they are not evidence about sealed autonomous loops. They do, however, carry a warning for this manuscript. Capability can jump non-linearly with no corresponding jump in information, because accessibility of latent information changes---the distinction Corollary~\ref{cor:pnp_info} draws. Information accounting bounds what a sealed loop can know; it is a poor instrument for forecasting what a grounded system will be able to do, and no forecast of that kind should be read into these results.
+
+%% ============================================================
+\section{Consensus Assessment}
+\label{sec:consensus}
+%% ============================================================
+
+This manuscript has been reviewed adversarially by five LLM generations (GPT-4o, Gemini, Claude Opus~4, Codex/GPT-5, Claude Fable~5), and the questions it addresses have been treated independently in the 2024--2026 literature. This section states where those sources converge, where they conflict, and what survives.
+
+\subsection{Converged}
+
+\begin{enumerate}
+    \item \textbf{The sealed loop does not produce open-ended improvement.} No reviewer produced a counterexample: a mechanism by which a text-only autoregressive model, consuming no externally grounded signal and replacing rather than accumulating its data, reaches the AGI criterion. The independent formal treatments agree---Zenil~\cite{limitsself2025} derives entropy decay and variance amplification under a vanishing exogenous signal; the model-collapse literature~\cite{shumailov2024model,dohmatob2024strong,seddik2024synthetic} derives degradation under replacement; the sharpening analysis~\cite{huang2024sharpening} bounds self-improvement by the base policy's coverage; and Yue et al.~\cite{yue2025rlvr} find RLVR reasoning bounded by the base model at large $k$. The conditional core of Section~\ref{sec:info} is the formal statement of this consensus, and it is now machine-checked.
+    \item \textbf{Improvement tracks the strength of the external signal.} Chen et al.~\cite{chen2026rsi} report a verification hierarchy---formal verifiers strongest, intrinsic self-assessment weakest---with demonstrated improvement tracking it. Our grounding audit (\S\ref{sec:grounding_audit}) finds the same ordering: execution-checked systems~\cite{novikov2025alphaevolve,zhao2025azr} and test-suite-checked systems~\cite{zhang2025dgm,zhang2026selfharness} report large gains; the two systems with no external correctness signal~\cite{huang2025rzero,pan2026coverrl} report single-digit gains and exhibit the predicted diversity collapse.
+    \item \textbf{Grounding saturates at the grounder's competence.} Yi et al.~\cite{yi2026escaping} prove that verifier-guided retraining converges to the verifier's knowledge center, with gains that plateau or reverse as the verifier is imperfect. This is the strongest quantitative form of the thesis available and it is not ours; it converges with our conclusion from a different direction.
+    \item \textbf{Unaided self-verification is unreliable.} Agreed by every reviewer and by the empirical record, with the qualification in item~3 of \S\ref{sec:contested}.
+\end{enumerate}
+
+\subsection{Contested, and consequential}
+\label{sec:contested}
+
+\begin{enumerate}
+    \item \textbf{Does RL expand the base model's reasoning boundary?} Yue et al.~\cite{yue2025rlvr} say no---RLVR sharpens what the base model can already sample. Liu et al.~\cite{liu2025prorl} say yes---prolonged RL finds solutions the base model fails at every $k$. This is the empirical crux for how much practical bite Corollary~\ref{cor:accuracy_ceiling} has, and it is unresolved. We do not claim it in our favour.
+    \item \textbf{Is collapse a property of self-training or of a training recipe?} Gerstgrasser et al.~\cite{gerstgrasser2024accumulate} bound the error under accumulation; Kang et al.~\cite{kang2025demystifying} find no degradation from rephrased synthetic data at realistic mixing ratios while textbook-style synthesis does collapse. The consensus that survives is narrower than ``self-training collapses'': collapse is a function of the regime, the synthesis method, and the mixing ratio.
+    \item \textbf{How much of the self-correction failure is real?} Chen et al.~\cite{chen2026selfcorrection} show that relabeling an error's apparent source, content held fixed, moves explicit correction rates by 23--93 points. The 2023 result stands as evidence about presentation-sensitive behaviour, not about a hard capability ceiling.
+\end{enumerate}
+
+\subsection{Rejected or withdrawn}
+
+Consensus was \emph{against} several claims made in earlier versions of this manuscript, and they have been withdrawn or demoted rather than defended:
+
+\begin{itemize}
+    \item The unrestricted AGI criterion (unsatisfiable; Proposition~\ref{prop:vacuity}).
+    \item Strict information decrease under the data processing inequality (Remark~\ref{rem:no_strictness}).
+    \item Literal support contraction (vacuous for softmax models; Section~\ref{sec:collapse_note}).
+    \item Universal error divergence (false in the accumulation regime; Section~\ref{sec:regimes}).
+    \item Parameter count growing with context length (empirically false; Remark~\ref{rem:rope}).
+    \item ``Human influence is mathematically necessary'' as a general claim---replaced by external grounding, with the deduction and embodiment boundary cases conceded (\S\ref{sec:grounding_discussion}).
+    \item The quantum-brain asymmetry as a premise. Every reviewer flagged it; it is empirical background and is used nowhere in the proof path.
+\end{itemize}
+
+\subsection{The residual claim}
+
+Reviewers converge on one meta-observation, which we accept: the strength of the headline claim came from the breadth of the definitions rather than from the mathematics. Stated at the width the mathematics supports, the residual claim is:
+
+\begin{quote}
+A sealed autoregressive self-distillation loop gains no information about ground truth, and its achievable accuracy on a fixed task family is capped by the information its initial model already carries. Every demonstrated route past that cap consumes an external grounding signal, and the improvement it buys appears to saturate at the competence of that signal.
+\end{quote}
+
+The first sentence is proved (Theorem~\ref{thm:info_ceiling}, Corollary~\ref{cor:accuracy_ceiling}, machine-checked). The second is an empirical regularity with one formal result behind it~\cite{yi2026escaping} and no counterexample we are aware of. The quantitative version---capability per bit of grounding---is the open problem, and it is a better problem than the one this manuscript started with.
 
 %% ============================================================
 %% Bibliography
